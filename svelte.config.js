@@ -7,6 +7,11 @@ const config = {
 	// for more information about preprocessors
 	preprocess: vitePreprocess(),
 	kit: {
+		router: { resolution: 'client', type: 'hash' },
+		paths: { base: '/guided-galaxy-generation ' },
+		output: {
+			bundleStrategy: 'inline'
+		},
 		adapter: adapter({
 			fallback: 'index.html'
 		})
