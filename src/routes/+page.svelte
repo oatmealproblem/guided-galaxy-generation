@@ -9,7 +9,6 @@
 
 	const WIDTH = 500;
 	const HEIGHT = 500;
-	const NUM_STARS_ATTEMPTS = 10_000;
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
@@ -114,6 +113,7 @@
 		strokes.length = 0;
 	}
 
+	let numberOfStars = $state(600);
 	let stars = $state<[number, number][]>([]);
 	function generateStars() {
 		if (!ctx) return;
@@ -126,7 +126,15 @@
 		}
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- we're not using this for reactivity, just temporary optimization
 		const added = new Set<string>();
-		for (let i = 0; i < NUM_STARS_ATTEMPTS; i++) {
+		let attempts = 0;
+		while (added.size < numberOfStars) {
+			if (attempts >= numberOfStars * 1000) {
+				console.error(
+					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars}`
+				);
+				break;
+			}
+			attempts++;
 			const x = Math.floor(Math.random() * WIDTH);
 			const y = Math.floor(Math.random() * HEIGHT);
 			if (!added.has(`${x},${y}`) && Math.random() < (getAlpha(x, y) / 255) ** 2) {
@@ -257,6 +265,10 @@
 		<button type="button" class={BUTTON_CLASS} onclick={undo}>Undo Stroke</button>
 		<button type="button" class={BUTTON_CLASS} onclick={redo}>Redo Stroke</button>
 		<button type="button" class={BUTTON_CLASS} onclick={clear}>Clear Canvas</button>
+		<label>
+			Number of Stars
+			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars} />
+		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
 		<label>
 			Connectedness

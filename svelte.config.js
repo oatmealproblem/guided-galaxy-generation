@@ -8,7 +8,7 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		router: { resolution: 'client', type: 'hash' },
-		paths: { base: '/guided-galaxy-generation ' },
+		// paths: { base: '/guided-galaxy-generation ' },
 		output: {
 			bundleStrategy: 'inline'
 		},
