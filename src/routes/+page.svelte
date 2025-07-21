@@ -4,6 +4,7 @@
 	// @ts-expect-error -- no 1st or 3rd party types available
 	import Atrament from 'atrament';
 	import { Delaunay } from 'd3-delaunay';
+	import { forceSimulation, forceManyBody } from 'd3-force';
 	import createGraph, { type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
@@ -117,6 +118,7 @@
 	}
 
 	let numberOfStars = $state(600);
+	let clusterDiffusion = $state(10);
 	let stars = $state<[number, number][]>([]);
 	function generateStars() {
 		if (!ctx) return;
@@ -145,6 +147,17 @@
 				stars.push([x, y]);
 			}
 		}
+		diffuseClusters();
+	}
+
+	function diffuseClusters() {
+		const simulation = forceSimulation(stars.map(([x, y]) => ({ x, y })))
+			.stop()
+			.force('manyBody', forceManyBody().strength(-1));
+		simulation.tick(Math.round(clusterDiffusion));
+		stars = Array.from(
+			new Set(simulation.nodes().map(({ x, y }) => [Math.round(x), Math.round(y)].toString()))
+		).map((v) => v.split(',').map((s) => parseInt(s)) as [number, number]);
 	}
 
 	let connectedness = $state(0.5);
@@ -277,6 +290,17 @@
 		<label>
 			Number of Stars
 			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars} />
+		</label>
+		<label>
+			Loosen Clusters
+			<input
+				class="bg-gray-800"
+				type="range"
+				min={0}
+				max={20}
+				step={1}
+				bind:value={clusterDiffusion}
+			/>
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
 		<label>
