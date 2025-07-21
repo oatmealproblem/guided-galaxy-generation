@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
+
 	// @ts-expect-error -- no 1st or 3rd party types available
 	import Atrament from 'atrament';
 	import { Delaunay } from 'd3-delaunay';
@@ -7,13 +9,14 @@
 	import kruskal from 'ngraph.kruskal';
 	import { untrack } from 'svelte';
 
-	const WIDTH = 500;
-	const HEIGHT = 500;
+	const WIDTH = 900;
+	const HEIGHT = 900;
+	const MAX_CONNECTION_LENGTH = Math.max(WIDTH, HEIGHT) / 2;
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
-	let brushSize = $state(5);
-	let brushBlur = $state(2);
+	let brushSize = $state(10);
+	let brushBlur = $state(3);
 	let filter = $derived(`blur(${brushSize * brushBlur}px)`);
 
 	let sketchpad = $derived(
@@ -144,8 +147,8 @@
 		}
 	}
 
-	let connectedness = $state(0.8);
-	let maxConnectionLength = $state(50);
+	let connectedness = $state(0.5);
+	let maxConnectionLength = $state(100);
 	let allowDisconnected = $state(false);
 	let connections = $state<[[number, number], [number, number]][]>([]);
 	function generateConnections() {
@@ -213,7 +216,13 @@
 		});
 	}
 
-	const BUTTON_CLASS = 'cursor-pointer bg-gray-700 p-2 hover:bg-gray-600';
+	let downloadUrl = $derived(
+		URL.createObjectURL(
+			new Blob([generateStellarisGalaxy(stars, connections)], { type: 'text/plain' })
+		)
+	);
+
+	const BUTTON_CLASS = 'cursor-pointer bg-gray-700 p-2 hover:bg-gray-600 text-center';
 </script>
 
 <div class="relative flex">
@@ -236,7 +245,7 @@
 			/>
 		{/each}
 		{#each stars as [x, y] (`${[x, y]}`)}
-			<circle cx={x} cy={y} r="1" fill="#FFFFFF" />
+			<circle cx={x} cy={y} r="2" fill="#FFFFFF" stroke="#000000" stroke-width="1" />
 		{/each}
 	</svg>
 	<form class="flex flex-col gap-2 p-4">
@@ -271,19 +280,28 @@
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
 		<label>
-			Connectedness
+			Hyperlane Density
 			<input type="range" min={0} max={1} step={0.01} bind:value={connectedness} />
 		</label>
 		<label>
-			Max Connection Length
-			<input type="range" min={0} max={WIDTH} step={1} bind:value={maxConnectionLength} />
+			Max Hyperlane Distance
+			<input
+				type="range"
+				min={0}
+				max={MAX_CONNECTION_LENGTH}
+				step={1}
+				bind:value={maxConnectionLength}
+			/>
 		</label>
 		<label>
 			Allow Disconnected
 			<input type="checkbox" bind:checked={allowDisconnected} />
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateConnections}>
-			Generate Connections
+			Generate Hyperlanes
 		</button>
+		<a href={downloadUrl} download="painted_galaxy.txt" class={BUTTON_CLASS}>
+			Download Stellaris Map
+		</a>
 	</form>
 </div>
