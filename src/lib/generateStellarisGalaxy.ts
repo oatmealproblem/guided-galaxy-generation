@@ -132,7 +132,8 @@ const HUGE = `
 
 export function generateStellarisGalaxy(
 	stars: [number, number][],
-	connections: [[number, number], [number, number]][]
+	connections: [[number, number], [number, number]][],
+	potentialHomeStars: string[]
 ): string {
 	let sizeBasedSettings = TINY;
 	if (stars.length >= 400) sizeBasedSettings = SMALL;
@@ -142,12 +143,10 @@ export function generateStellarisGalaxy(
 
 	const keyToId = Object.fromEntries(stars.map((coords, i) => [coords.toString(), i]));
 
-	// 6 per 200 is the vanilla num_empires max, but some origins spawn additional empires, so let's double this to be safe
-	const numSpawnSystems = Math.ceil((stars.length / 200) * 6) * 2;
 	const systems = stars
 		.map(
 			(star, i) =>
-				`\tsystem = { id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - 450)} y = ${star[1] - 450} } ${i < numSpawnSystems ? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 1 }` : ''} }`
+				`\tsystem = { id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - 450)} y = ${star[1] - 450} } ${potentialHomeStars.includes(star.toString()) ? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 1 }` : ''} }`
 		)
 		.join('\n');
 	const hyperlanes = connections
@@ -159,4 +158,9 @@ export function generateStellarisGalaxy(
 	return [`static_galaxy_scenario = {`, COMMON, sizeBasedSettings, systems, hyperlanes, '}'].join(
 		'\n\n'
 	);
+}
+
+export function calcNumStartingStars(stars: [number, number][]) {
+	// 6 per 200 is the vanilla num_empires max, but some origins spawn additional empires, so let's double this to be safe
+	return Math.ceil((stars.length / 200) * 6) * 2;
 }

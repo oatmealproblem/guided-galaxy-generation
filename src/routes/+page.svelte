@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
-
 	// @ts-expect-error -- no 1st or 3rd party types available
 	import Atrament from 'atrament';
 	import { Delaunay } from 'd3-delaunay';
-	import { forceSimulation, forceManyBody } from 'd3-force';
+	import { forceManyBody, forceSimulation } from 'd3-force';
 	import createGraph, { type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
 	import { untrack } from 'svelte';
+
+	import { dev } from '$app/environment';
+	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 
 	const WIDTH = 900;
 	const HEIGHT = 900;
@@ -124,6 +125,7 @@
 		if (!ctx) return;
 		stars.length = 0;
 		connections.length = 0;
+		potentialHomeStars.length = 0;
 		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 		function getAlpha(x: number, y: number) {
 			const index = y * WIDTH * 4 + x * 4 + 3;
@@ -164,10 +166,15 @@
 	let maxConnectionLength = $state(100);
 	let allowDisconnected = $state(false);
 	let connections = $state<[[number, number], [number, number]][]>([]);
+	let potentialHomeStars = $state<string[]>([]);
 	function generateConnections() {
 		connections.length = 0;
+		potentialHomeStars.length = 0;
 		if (stars.length < 3) return;
-		const g = createGraph<[number, number], { distance: number; isMst?: boolean }>();
+		const g = createGraph<
+			{ coords: [number, number]; d: number },
+			{ distance: number; isMst?: boolean }
+		>();
 		// generate triangulation
 		const delaunay = new Delaunay(stars.flat());
 		const renderContext = {
@@ -181,8 +188,8 @@
 				const id1 = `${this.x},${this.y}`;
 				const id2 = `${x},${y}`;
 				const distance = Math.hypot(this.x - x, this.y - y);
-				if (!g.hasNode(id1)) g.addNode(id1, [this.x, this.y]);
-				if (!g.hasNode(id2)) g.addNode(id2, [x, y]);
+				if (!g.hasNode(id1)) g.addNode(id1, { coords: [this.x, this.y], d: Infinity });
+				if (!g.hasNode(id2)) g.addNode(id2, { coords: [x, y], d: Infinity });
 				g.addLink(id1, id2, { distance });
 
 				this.x = x;
@@ -218,6 +225,59 @@
 			}
 		}
 
+		// find home stars
+		const numPotentialHomeStars = calcNumStartingStars(stars);
+		const newPotentialHomeStars: [number, number][] = [];
+		for (let i = 0; i < numPotentialHomeStars; i++) {
+			newPotentialHomeStars.push(stars[i]);
+		}
+		// move each to the star furthest from all other stars
+		// a single iteration of this seems to be good enough
+		newPotentialHomeStars.forEach((star, index) => {
+			// reset distance to inf
+			g.forEachNode((node) => {
+				node.data.d = Infinity;
+			});
+			const edge: [number, number][] = [];
+			// set distance of other potential homes to 0, and add them to the edge
+			newPotentialHomeStars
+				.filter((other) => other !== star)
+				.forEach((other) => {
+					const node = g.getNode(other.toString());
+					node!.data.d = 0;
+					edge.push(other);
+				});
+			let maxDistance = 0;
+			let maxDistanceStars: [number, number][] = [];
+			// modified Dijkstra's to find stars furthest from other home systems
+			// (simplified since all edge weights are 1)
+			while (edge.length) {
+				const s = edge.pop()!;
+				g.forEachLinkedNode(
+					s.toString(),
+					(node) => {
+						if (node.data.d === Infinity) {
+							node.data.d = g.getNode(s.toString())!.data.d + 1;
+							if (node.data.d > maxDistance) {
+								maxDistance = node.data.d;
+								maxDistanceStars = [node.data.coords];
+							} else if (node.data.d === maxDistance) {
+								maxDistanceStars.push(node.data.coords);
+							}
+							edge.unshift(node.data.coords);
+						}
+					},
+					false
+				);
+			}
+			// move this starting system to the farthest star (random for tie)
+			if (maxDistance > 0 && maxDistanceStars.length > 0) {
+				newPotentialHomeStars[index] =
+					maxDistanceStars[Math.floor(Math.random() * maxDistanceStars.length)];
+			}
+		});
+		potentialHomeStars = newPotentialHomeStars.map((s) => s.toString());
+
 		// add connections to state
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not using for state
 		const added = new Set<string>();
@@ -225,13 +285,15 @@
 			const key = [link.toId, link.fromId].sort().toString();
 			if (added.has(key)) return;
 			added.add(key);
-			connections.push([g.getNode(link.fromId)!.data, g.getNode(link.toId)!.data]);
+			connections.push([g.getNode(link.fromId)!.data.coords, g.getNode(link.toId)!.data.coords]);
 		});
 	}
 
 	let downloadUrl = $derived(
 		URL.createObjectURL(
-			new Blob([generateStellarisGalaxy(stars, connections)], { type: 'text/plain' })
+			new Blob([generateStellarisGalaxy(stars, connections, potentialHomeStars)], {
+				type: 'text/plain'
+			})
 		)
 	);
 
@@ -258,7 +320,14 @@
 			/>
 		{/each}
 		{#each stars as [x, y] (`${[x, y]}`)}
-			<circle cx={x} cy={y} r="2" fill="#FFFFFF" stroke="#000000" stroke-width="1" />
+			<circle
+				cx={x}
+				cy={y}
+				r="2"
+				fill={dev && potentialHomeStars.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
+				stroke="#000000"
+				stroke-width="1"
+			/>
 		{/each}
 	</svg>
 	<form class="flex flex-col gap-2 p-4">
