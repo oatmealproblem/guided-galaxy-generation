@@ -39,12 +39,15 @@
 	let strokes = $state<RecordedStroke[]>([]);
 	let imageDataStack = $state<ImageData[]>([]);
 	let undoneStrokes = $state<RecordedStroke[]>([]);
+	let imageDataUndoStack = $state<ImageData[]>([]);
+
 	$effect(() => {
 		if (!sketchpad) return;
 		function strokeHandler({ stroke }: { stroke: unknown }) {
 			strokes.push([stroke, brushSize, brushBlur, brushMode]);
 			pushImageData();
 			undoneStrokes.length = 0;
+			imageDataUndoStack.length = 0;
 		}
 		sketchpad.recordStrokes = true;
 		sketchpad.addEventListener('strokerecorded', strokeHandler);
@@ -127,7 +130,7 @@
 	function undo() {
 		if (!sketchpad) return;
 		if (strokes.length) undoneStrokes.push(strokes.pop()!);
-		imageDataStack.pop();
+		if (imageDataStack.length) imageDataUndoStack.push(imageDataStack.pop()!);
 		const lastImageData = imageDataStack.at(-1);
 		if (lastImageData) {
 			ctx?.clearRect(0, 0, WIDTH, HEIGHT);
@@ -141,8 +144,14 @@
 		if (!sketchpad) return;
 		if (undoneStrokes.length) {
 			const stroke = undoneStrokes.pop()!;
-			drawRecordedStroke(stroke);
-			pushImageData();
+			const imageData = imageDataUndoStack.pop();
+			if (imageData) {
+				ctx?.putImageData(imageData, 0, 0);
+				imageDataStack.push(imageData);
+			} else {
+				drawRecordedStroke(stroke);
+				pushImageData();
+			}
 			strokes.push(stroke);
 		}
 	}
@@ -151,6 +160,9 @@
 		if (!sketchpad) return;
 		sketchpad.clear();
 		strokes.length = 0;
+		undoneStrokes.length = 0;
+		imageDataStack.length = 0;
+		imageDataUndoStack.length = 0;
 	}
 
 	let numberOfStars = $state(600);
