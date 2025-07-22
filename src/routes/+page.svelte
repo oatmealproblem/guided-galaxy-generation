@@ -304,6 +304,21 @@
 	const BUTTON_CLASS = 'cursor-pointer bg-gray-700 p-2 hover:bg-gray-600 text-center';
 </script>
 
+<svelte:document
+	onkeydown={(e) => {
+		console.log(e);
+		if (document.activeElement?.tagName === 'INPUT') return;
+		if (e.key === 'z' && e.ctrlKey) {
+			undo();
+		} else if (
+			(e.key === 'y' && e.ctrlKey) ||
+			(e.key.toLowerCase() === 'z' && e.ctrlKey && e.shiftKey)
+		) {
+			redo();
+		}
+	}}
+/>
+
 <div class="relative flex">
 	<canvas width={WIDTH} height={HEIGHT} bind:this={canvas} class="border border-white"></canvas>
 	<svg
