@@ -1,6 +1,7 @@
 <script lang="ts">
 	// @ts-expect-error -- no 1st or 3rd party types available
-	import Atrament from 'atrament';
+	import Atrament, { MODE_DRAW, MODE_ERASE } from 'atrament';
+
 	import { Delaunay } from 'd3-delaunay';
 	import { forceManyBody, forceSimulation } from 'd3-force';
 	import createGraph, { type Link } from 'ngraph.graph';
@@ -19,6 +20,7 @@
 
 	let brushSize = $state(10);
 	let brushBlur = $state(3);
+	let brushMode = $state(MODE_DRAW);
 	let filter = $derived(`blur(${brushSize * brushBlur}px)`);
 
 	let sketchpad = $derived(
@@ -27,18 +29,18 @@
 					width: WIDTH,
 					height: HEIGHT,
 					weight: untrack(() => brushSize),
+					mode: untrack(() => brushMode),
 					color: '#FFFFFF'
 				})
 			: null
 	);
 
-	let strokes = $state<[unknown, number, number][]>([]);
-	let undoneStrokes = $state<[unknown, number, number][]>([]);
+	let strokes = $state<[unknown, number, number, string][]>([]);
+	let undoneStrokes = $state<[unknown, number, number, string][]>([]);
 	$effect(() => {
 		if (!sketchpad) return;
 		function strokeHandler({ stroke }: { stroke: unknown }) {
-			console.log('recording stroke');
-			strokes.push([stroke, brushSize, brushBlur]);
+			strokes.push([stroke, brushSize, brushBlur, brushMode]);
 			undoneStrokes.length = 0;
 		}
 		sketchpad.recordStrokes = true;
@@ -58,8 +60,9 @@
 		sketchpad.clear();
 		sketchpad.recordStrokes = false;
 
-		for (const [stroke, recordedBrushSize, recordedBrushBlur] of strokes) {
+		for (const [stroke, recordedBrushSize, recordedBrushBlur, recordedMode] of strokes) {
 			sketchpad.weight = recordedBrushSize;
+			sketchpad.mode = recordedMode;
 			ctx.filter = `blur(${recordedBrushSize * recordedBrushBlur}px)`;
 
 			// don't want to modify original data
@@ -97,6 +100,7 @@
 
 		sketchpad.recordStrokes = true;
 		sketchpad.weight = brushSize;
+		sketchpad.mode = brushMode;
 		ctx.filter = filter;
 	}
 
@@ -352,6 +356,22 @@
 		<label>
 			Brush Blur
 			<input type="range" min={0} max={5} step={0.1} bind:value={brushBlur} />
+		</label>
+		<label>
+			Mode
+			<select
+				class="bg-gray-800"
+				bind:value={
+					() => brushMode,
+					(value) => {
+						brushMode = value;
+						sketchpad.mode = value;
+					}
+				}
+			>
+				<option>{MODE_DRAW}</option>
+				<option>{MODE_ERASE}</option>
+			</select>
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={undo}>Undo Stroke</button>
 		<button type="button" class={BUTTON_CLASS} onclick={redo}>Redo Stroke</button>
