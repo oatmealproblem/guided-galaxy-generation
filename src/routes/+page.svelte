@@ -35,12 +35,15 @@
 			: null
 	);
 
-	let strokes = $state<[unknown, number, number, string][]>([]);
-	let undoneStrokes = $state<[unknown, number, number, string][]>([]);
+	type RecordedStroke = [unknown, number, number, string];
+	let strokes = $state<RecordedStroke[]>([]);
+	let imageDataStack = $state<ImageData[]>([]);
+	let undoneStrokes = $state<RecordedStroke[]>([]);
 	$effect(() => {
 		if (!sketchpad) return;
 		function strokeHandler({ stroke }: { stroke: unknown }) {
 			strokes.push([stroke, brushSize, brushBlur, brushMode]);
+			pushImageData();
 			undoneStrokes.length = 0;
 		}
 		sketchpad.recordStrokes = true;
@@ -49,54 +52,63 @@
 		return () => sketchpad.removeEventListener('strokerecorded', strokeHandler);
 	});
 
+	const MAX_IMAGE_DATA_STACK_SIZE = 10;
+	function pushImageData() {
+		imageDataStack.push(ctx!.getImageData(0, 0, WIDTH, HEIGHT));
+		while (imageDataStack.length > MAX_IMAGE_DATA_STACK_SIZE) {
+			imageDataStack.shift();
+		}
+	}
+
 	$effect(() => {
 		if (ctx) {
 			ctx.filter = filter;
 		}
 	});
 
-	function redraw() {
-		if (!sketchpad || !ctx) return;
-		sketchpad.clear();
+	function drawRecordedStroke([
+		stroke,
+		recordedBrushSize,
+		recordedBrushBlur,
+		recordedMode
+	]: RecordedStroke) {
+		if (!ctx || !sketchpad) return;
 		sketchpad.recordStrokes = false;
+		sketchpad.weight = recordedBrushSize;
+		sketchpad.mode = recordedMode;
+		ctx.filter = `blur(${recordedBrushSize * recordedBrushBlur}px)`;
 
-		for (const [stroke, recordedBrushSize, recordedBrushBlur, recordedMode] of strokes) {
-			sketchpad.weight = recordedBrushSize;
-			sketchpad.mode = recordedMode;
-			ctx.filter = `blur(${recordedBrushSize * recordedBrushBlur}px)`;
+		// don't want to modify original data
+		const segments = (
+			stroke as { segments: { pressure: number; point: { x: number; y: number } }[] }
+		).segments.slice();
 
-			// don't want to modify original data
-			const segments = (
-				stroke as { segments: { pressure: number; point: { x: number; y: number } }[] }
-			).segments.slice();
+		const firstPoint = segments.shift()!.point;
+		// beginStroke moves the "pen" to the given position and starts the path
+		sketchpad.beginStroke(firstPoint.x, firstPoint.y);
 
-			const firstPoint = segments.shift()!.point;
-			// beginStroke moves the "pen" to the given position and starts the path
-			sketchpad.beginStroke(firstPoint.x, firstPoint.y);
+		let prevPoint = firstPoint;
+		while (segments.length > 0) {
+			const segment = segments.shift()!;
 
-			let prevPoint = firstPoint;
-			while (segments.length > 0) {
-				const segment = segments.shift()!;
+			// the `draw` method accepts the current real coordinates
+			// (i. e. actual cursor position), and the previous processed (filtered)
+			// position. It returns an object with the current processed position.
+			const { x, y } = sketchpad.draw(
+				segment.point.x,
+				segment.point.y,
+				prevPoint.x,
+				prevPoint.y,
+				segment.pressure
+			);
 
-				// the `draw` method accepts the current real coordinates
-				// (i. e. actual cursor position), and the previous processed (filtered)
-				// position. It returns an object with the current processed position.
-				const { x, y } = sketchpad.draw(
-					segment.point.x,
-					segment.point.y,
-					prevPoint.x,
-					prevPoint.y,
-					segment.pressure
-				);
-
-				// the processed position is the one where the line is actually drawn to
-				// so we have to store it and pass it to `draw` in the next step
-				prevPoint = { x, y };
-			}
-
-			// endStroke closes the path
-			sketchpad.endStroke(prevPoint.x, prevPoint.y);
+			// the processed position is the one where the line is actually drawn to
+			// so we have to store it and pass it to `draw` in the next step
+			prevPoint = { x, y };
 		}
+
+		// endStroke closes the path
+		sketchpad.endStroke(prevPoint.x, prevPoint.y);
 
 		sketchpad.recordStrokes = true;
 		sketchpad.weight = brushSize;
@@ -104,16 +116,35 @@
 		ctx.filter = filter;
 	}
 
+	function redraw() {
+		if (!sketchpad || !ctx) return;
+		sketchpad.clear();
+		for (const stroke of strokes) {
+			drawRecordedStroke(stroke);
+		}
+	}
+
 	function undo() {
 		if (!sketchpad) return;
 		if (strokes.length) undoneStrokes.push(strokes.pop()!);
-		redraw();
+		imageDataStack.pop();
+		const lastImageData = imageDataStack.at(-1);
+		if (lastImageData) {
+			ctx?.clearRect(0, 0, WIDTH, HEIGHT);
+			ctx?.putImageData(lastImageData, 0, 0);
+		} else {
+			redraw();
+		}
 	}
 
 	function redo() {
 		if (!sketchpad) return;
-		if (undoneStrokes.length) strokes.push(undoneStrokes.pop()!);
-		redraw();
+		if (undoneStrokes.length) {
+			const stroke = undoneStrokes.pop()!;
+			drawRecordedStroke(stroke);
+			pushImageData();
+			strokes.push(stroke);
+		}
 	}
 
 	function clear() {
