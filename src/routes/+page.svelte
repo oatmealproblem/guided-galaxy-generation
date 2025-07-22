@@ -395,6 +395,7 @@
 		{/each}
 	</svg>
 	<form class="flex flex-col gap-2 p-4">
+		<h2 class="text-2xl">Paint</h2>
 		<label>
 			Brush Size
 			<input
@@ -436,6 +437,9 @@
 		<button type="button" class={BUTTON_CLASS} onclick={undo}>Undo Stroke</button>
 		<button type="button" class={BUTTON_CLASS} onclick={redo}>Redo Stroke</button>
 		<button type="button" class={BUTTON_CLASS} onclick={clear}>Clear Canvas</button>
+
+		<hr class="my-2 border-gray-800" />
+		<h2 class="text-2xl">Stars</h2>
 		<label>
 			Number of Stars
 			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars} />
@@ -452,6 +456,9 @@
 			/>
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
+
+		<hr class="my-2 border-gray-800" />
+		<h2 class="text-2xl">Hyperlanes</h2>
 		<label>
 			Hyperlane Density
 			<input type="range" min={0} max={1} step={0.01} bind:value={connectedness} />
@@ -473,6 +480,9 @@
 		<button type="button" class={BUTTON_CLASS} onclick={generateConnections}>
 			Generate Hyperlanes
 		</button>
+
+		<hr class="my-2 border-gray-800" />
+		<h2 class="text-2xl">Mod</h2>
 		<a href={downloadUrl} download="painted_galaxy.txt" class={BUTTON_CLASS}>
 			Download Stellaris Map
 		</a>

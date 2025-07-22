@@ -1,10 +1,10 @@
-# Guided Galaxy Generation
+# Paint a Galaxy
 
-Proof-of-concept for a semi-random galaxy map, for potentially future use in StellarMaps:
+Generate a semi-random galaxy to play in Stellaris
 - Paint where you want stars
 - Generate stars
-- (Optionally) clear canvas
 - Generate connections
+- Download Stellaris map mod
 
 ## Developing
 
