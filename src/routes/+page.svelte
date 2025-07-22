@@ -303,7 +303,9 @@
 				g.forEachLinkedNode(
 					s.toString(),
 					(node) => {
-						if (node.data.d === Infinity) {
+						// avoid dead ends; they can be unfair/unfun home systems
+						const isDeadEnd = node.links == null || node.links.size <= 1;
+						if (node.data.d === Infinity && !isDeadEnd) {
 							node.data.d = g.getNode(s.toString())!.data.d + 1;
 							if (node.data.d > maxDistance) {
 								maxDistance = node.data.d;
