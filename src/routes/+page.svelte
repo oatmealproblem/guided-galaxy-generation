@@ -7,10 +7,11 @@
 	import createGraph, { type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	import { dev } from '$app/environment';
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
+	import { LocalStorageState } from '$lib/state.svelte';
 
 	const WIDTH = 900;
 	const HEIGHT = 900;
@@ -18,18 +19,21 @@
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
-	let brushSize = $state(10);
-	let brushBlur = $state(3);
-	let brushMode = $state(MODE_DRAW);
-	let filter = $derived(`blur(${brushSize * brushBlur}px)`);
+	let brushSize = new LocalStorageState('brushSize', 10);
+	let brushBlur = new LocalStorageState('brushBlur', 3);
+	let brushMode = new LocalStorageState('brushMode', MODE_DRAW);
+	let filter = $derived(`blur(${brushSize.current * brushBlur.current}px)`);
+	$effect(() => {
+		if (ctx) ctx.filter = filter;
+	});
 
 	let sketchpad = $derived(
 		canvas
 			? new Atrament(canvas, {
 					width: WIDTH,
 					height: HEIGHT,
-					weight: untrack(() => brushSize),
-					mode: untrack(() => brushMode),
+					weight: untrack(() => brushSize.current),
+					mode: untrack(() => brushMode.current),
 					color: '#FFFFFF'
 				})
 			: null
@@ -44,10 +48,11 @@
 	$effect(() => {
 		if (!sketchpad) return;
 		function strokeHandler({ stroke }: { stroke: unknown }) {
-			strokes.push([stroke, brushSize, brushBlur, brushMode]);
+			strokes.push([stroke, brushSize.current, brushBlur.current, brushMode.current]);
 			pushImageData();
 			undoneStrokes.length = 0;
 			imageDataUndoStack.length = 0;
+			saveCanvas();
 		}
 		sketchpad.recordStrokes = true;
 		sketchpad.addEventListener('strokerecorded', strokeHandler);
@@ -63,8 +68,27 @@
 		}
 	}
 
-	$effect(() => {
-		if (ctx) {
+	function saveCanvas() {
+		if (!canvas) return;
+		const dataUrl = canvas.toDataURL();
+		localStorage.setItem('paint-a-galaxy-canvas', dataUrl);
+	}
+
+	onMount(() => {
+		const base64ImageData = localStorage.getItem('paint-a-galaxy-canvas');
+		if (base64ImageData) {
+			fetch(base64ImageData)
+				.then((resp) => resp.blob())
+				.then((blob) => createImageBitmap(blob))
+				.then((bitmap) => {
+					if (ctx) {
+						sketchpad.mode = MODE_DRAW;
+						ctx.drawImage(bitmap, 0, 0);
+						ctx.filter = filter;
+						sketchpad.mode = brushMode.current;
+					}
+				});
+		} else if (ctx) {
 			ctx.filter = filter;
 		}
 	});
@@ -114,8 +138,8 @@
 		sketchpad.endStroke(prevPoint.x, prevPoint.y);
 
 		sketchpad.recordStrokes = true;
-		sketchpad.weight = brushSize;
-		sketchpad.mode = brushMode;
+		sketchpad.weight = brushSize.current;
+		sketchpad.mode = brushMode.current;
 		ctx.filter = filter;
 	}
 
@@ -135,8 +159,10 @@
 		if (lastImageData) {
 			ctx?.clearRect(0, 0, WIDTH, HEIGHT);
 			ctx?.putImageData(lastImageData, 0, 0);
+			saveCanvas();
 		} else {
 			redraw();
+			saveCanvas();
 		}
 	}
 
@@ -148,9 +174,11 @@
 			if (imageData) {
 				ctx?.putImageData(imageData, 0, 0);
 				imageDataStack.push(imageData);
+				saveCanvas();
 			} else {
 				drawRecordedStroke(stroke);
 				pushImageData();
+				saveCanvas();
 			}
 			strokes.push(stroke);
 		}
@@ -163,16 +191,17 @@
 		undoneStrokes.length = 0;
 		imageDataStack.length = 0;
 		imageDataUndoStack.length = 0;
+		saveCanvas();
 	}
 
-	let numberOfStars = $state(600);
-	let clusterDiffusion = $state(10);
-	let stars = $state<[number, number][]>([]);
+	let numberOfStars = new LocalStorageState('numberOfStars', 600);
+	let clusterDiffusion = new LocalStorageState('clusterDiffusion', 10);
+	let stars = new LocalStorageState<[number, number][]>('stars', []);
 	function generateStars() {
 		if (!ctx) return;
-		stars.length = 0;
-		connections.length = 0;
-		potentialHomeStars.length = 0;
+		stars.current.length = 0;
+		connections.current.length = 0;
+		potentialHomeStars.current.length = 0;
 		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 		function getAlpha(x: number, y: number) {
 			const index = y * WIDTH * 4 + x * 4 + 3;
@@ -181,8 +210,8 @@
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- we're not using this for reactivity, just temporary optimization
 		const added = new Set<string>();
 		let attempts = 0;
-		while (added.size < numberOfStars) {
-			if (attempts >= numberOfStars * 1000) {
+		while (added.size < numberOfStars.current) {
+			if (attempts >= numberOfStars.current * 1000) {
 				console.error(
 					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars}`
 				);
@@ -193,37 +222,40 @@
 			const y = Math.floor(Math.random() * HEIGHT);
 			if (!added.has(`${x},${y}`) && Math.random() < (getAlpha(x, y) / 255) ** 2) {
 				added.add(`${x},${y}`);
-				stars.push([x, y]);
+				stars.current.push([x, y]);
 			}
 		}
 		diffuseClusters();
 	}
 
 	function diffuseClusters() {
-		const simulation = forceSimulation(stars.map(([x, y]) => ({ x, y })))
+		const simulation = forceSimulation(stars.current.map(([x, y]) => ({ x, y })))
 			.stop()
 			.force('manyBody', forceManyBody().strength(-1));
-		simulation.tick(Math.round(clusterDiffusion));
-		stars = Array.from(
+		simulation.tick(Math.round(clusterDiffusion.current));
+		stars.current = Array.from(
 			new Set(simulation.nodes().map(({ x, y }) => [Math.round(x), Math.round(y)].toString()))
 		).map((v) => v.split(',').map((s) => parseInt(s)) as [number, number]);
 	}
 
-	let connectedness = $state(0.5);
-	let maxConnectionLength = $state(100);
-	let allowDisconnected = $state(false);
-	let connections = $state<[[number, number], [number, number]][]>([]);
-	let potentialHomeStars = $state<string[]>([]);
+	let connectedness = new LocalStorageState('connectedness', 0.5);
+	let maxConnectionLength = new LocalStorageState('maxConnectionLength', 100);
+	let allowDisconnected = new LocalStorageState('allowDisconnected', false);
+	let connections = new LocalStorageState<[[number, number], [number, number]][]>(
+		'connections',
+		[]
+	);
+	let potentialHomeStars = new LocalStorageState<string[]>('potentialHomeStars', []);
 	function generateConnections() {
-		connections.length = 0;
-		potentialHomeStars.length = 0;
-		if (stars.length < 3) return;
+		connections.current.length = 0;
+		potentialHomeStars.current.length = 0;
+		if (stars.current.length < 3) return;
 		const g = createGraph<
 			{ coords: [number, number]; d: number },
 			{ distance: number; isMst?: boolean }
 		>();
 		// generate triangulation
-		const delaunay = new Delaunay(stars.flat());
+		const delaunay = new Delaunay(stars.current.flat());
 		const renderContext = {
 			x: 0,
 			y: 0,
@@ -265,18 +297,19 @@
 		});
 		for (const link of links) {
 			if (
-				(link.data.distance > maxConnectionLength && (!link.data.isMst || allowDisconnected)) ||
-				(Math.random() > connectedness && !link.data.isMst)
+				(link.data.distance > maxConnectionLength.current &&
+					(!link.data.isMst || allowDisconnected.current)) ||
+				(Math.random() > connectedness.current && !link.data.isMst)
 			) {
 				g.removeLink(link);
 			}
 		}
 
 		// find home stars
-		const numPotentialHomeStars = calcNumStartingStars(stars);
+		const numPotentialHomeStars = calcNumStartingStars(stars.current);
 		const newPotentialHomeStars: [number, number][] = [];
 		for (let i = 0; i < numPotentialHomeStars; i++) {
-			newPotentialHomeStars.push(stars[i]);
+			newPotentialHomeStars.push(stars.current[i]);
 		}
 		// move each to the star furthest from all other stars
 		// a single iteration of this seems to be good enough
@@ -325,7 +358,7 @@
 					maxDistanceStars[Math.floor(Math.random() * maxDistanceStars.length)];
 			}
 		});
-		potentialHomeStars = newPotentialHomeStars.map((s) => s.toString());
+		potentialHomeStars.current = newPotentialHomeStars.map((s) => s.toString());
 
 		// add connections to state
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not using for state
@@ -334,15 +367,21 @@
 			const key = [link.toId, link.fromId].sort().toString();
 			if (added.has(key)) return;
 			added.add(key);
-			connections.push([g.getNode(link.fromId)!.data.coords, g.getNode(link.toId)!.data.coords]);
+			connections.current.push([
+				g.getNode(link.fromId)!.data.coords,
+				g.getNode(link.toId)!.data.coords
+			]);
 		});
 	}
 
 	let downloadUrl = $derived(
 		URL.createObjectURL(
-			new Blob([generateStellarisGalaxy(stars, connections, potentialHomeStars)], {
-				type: 'text/plain'
-			})
+			new Blob(
+				[generateStellarisGalaxy(stars.current, connections.current, potentialHomeStars.current)],
+				{
+					type: 'text/plain'
+				}
+			)
 		)
 	);
 
@@ -351,7 +390,6 @@
 
 <svelte:document
 	onkeydown={(e) => {
-		console.log(e);
 		if (document.activeElement?.tagName === 'INPUT') return;
 		if (e.key === 'z' && e.ctrlKey) {
 			undo();
@@ -372,7 +410,7 @@
 		width={WIDTH}
 		height={HEIGHT}
 	>
-		{#each connections as [from, to] (`${[from, to]}`)}
+		{#each connections.current as [from, to] (`${[from, to]}`)}
 			<line
 				x1={from[0]}
 				y1={from[1]}
@@ -383,12 +421,12 @@
 				stroke-width="1"
 			/>
 		{/each}
-		{#each stars as [x, y] (`${[x, y]}`)}
+		{#each stars.current as [x, y] (`${[x, y]}`)}
 			<circle
 				cx={x}
 				cy={y}
 				r="2"
-				fill={dev && potentialHomeStars.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
+				fill={dev && potentialHomeStars.current.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
 				stroke="#000000"
 				stroke-width="1"
 			/>
@@ -404,9 +442,9 @@
 				max={20}
 				step={1}
 				bind:value={
-					() => brushSize,
+					() => brushSize.current,
 					(value) => {
-						brushSize = value;
+						brushSize.current = value;
 						if (sketchpad) {
 							sketchpad.weight = value;
 						}
@@ -416,16 +454,16 @@
 		</label>
 		<label>
 			Brush Blur
-			<input type="range" min={0} max={5} step={0.1} bind:value={brushBlur} />
+			<input type="range" min={0} max={3} step={0.1} bind:value={brushBlur.current} />
 		</label>
 		<label>
 			Mode
 			<select
 				class="bg-gray-800"
 				bind:value={
-					() => brushMode,
+					() => brushMode.current,
 					(value) => {
-						brushMode = value;
+						brushMode.current = value;
 						sketchpad.mode = value;
 					}
 				}
@@ -442,7 +480,7 @@
 		<h2 class="text-2xl">Stars</h2>
 		<label>
 			Number of Stars
-			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars} />
+			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars.current} />
 		</label>
 		<label>
 			Loosen Clusters
@@ -452,7 +490,7 @@
 				min={0}
 				max={20}
 				step={1}
-				bind:value={clusterDiffusion}
+				bind:value={clusterDiffusion.current}
 			/>
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
@@ -461,7 +499,7 @@
 		<h2 class="text-2xl">Hyperlanes</h2>
 		<label>
 			Hyperlane Density
-			<input type="range" min={0} max={1} step={0.01} bind:value={connectedness} />
+			<input type="range" min={0} max={1} step={0.01} bind:value={connectedness.current} />
 		</label>
 		<label>
 			Max Hyperlane Distance
@@ -470,12 +508,12 @@
 				min={0}
 				max={MAX_CONNECTION_LENGTH}
 				step={1}
-				bind:value={maxConnectionLength}
+				bind:value={maxConnectionLength.current}
 			/>
 		</label>
 		<label>
 			Allow Disconnected
-			<input type="checkbox" bind:checked={allowDisconnected} />
+			<input type="checkbox" bind:checked={allowDisconnected.current} />
 		</label>
 		<button type="button" class={BUTTON_CLASS} onclick={generateConnections}>
 			Generate Hyperlanes
