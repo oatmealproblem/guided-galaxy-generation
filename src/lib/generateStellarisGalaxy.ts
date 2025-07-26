@@ -2,6 +2,15 @@ const COMMON = `
 	name = "Painted Galaxy"
 	priority = 10
 	supports_shape = elliptical
+	supports_shape = ring
+	supports_shape = spiral_2
+	supports_shape = spiral_3
+	supports_shape = spiral_4
+	supports_shape = spiral_6
+	supports_shape = bar
+	supports_shape = starburst
+	supports_shape = cartwheel
+	supports_shape = spoked
 	random_hyperlanes = no
 `;
 
