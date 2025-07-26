@@ -1,0 +1,54 @@
+Paint your very own galaxy and play in it!
+
+[h1]IMPORTANT: read the instructions[/h1]
+
+This mod does [b]nothing[/b] on it's own. You use it alongside [url=https://oatmealproblem.github.io/paint-a-galaxy]the Paint a Galaxy web app[/url].
+
+[olist]
+  [*] Subscribe to and activate this mod
+  [*] Paint, generate stars and hyperlanes, and download the txt file in [url=https://oatmealproblem.github.io/paint-a-galaxy]the web app[/url]
+  [*] Create your own mod for your custom galaxy
+  [list]
+    [*] Open the launcher
+    [*] Go to the "Mod Library" tab
+    [*] Click "Upload Mod"
+    [*] Click "Create a Mod"
+    [*] Enter whatever values you want, and click "Create Mod"
+  [/list]
+  [*] Open your mod's folder
+  [list]
+    [*] Find the mod in your "Mod Library" in the launcher (there's a search at the top)
+    [*] Hover over the mod and click the 3 dots to the right, then click "Show in Folder"
+  [/list]
+  [*] Create a new folder "map", and inside "map" create a new folder "setup_scenarios"
+  [*] Move the txt file you downloaded to the "setup_scenarios" folder
+  [*] Make sure both this mod and your mod are active
+  [*] Run the game, and select "Painted Galaxy" as your galaxy size when starting a new game
+  [list]
+    [*] I highly recommend setting Guaranteed Habitable Planets to 0. See known issues below.
+  [/list]
+[/olist]
+
+[h1]Known Issues[/h1]
+[list]
+  [*] You [b]must[/b] activate this mod too, otherwise many empires will have incorrect homeworlds (eg gas giants, etc)
+  [*] Fallen Empires do not spawn (will fix)
+  [*] Marauders spawn with only system each (will fix)
+  [*] No nebulas (will fix)
+  [*] Guaranteed habitable planets do not work. This is a limitation of static galaxies without a simple solution. (might fix)
+  [*] Federation origins do not work unless you turn guaranteed habitable planets off (would be fixed by the above fix)
+[/list]
+
+[h1]Compatibility[/h1]
+[list]
+  [*] Should be compatible with most mods
+  [*] If you are using a mod that adds galaxy shapes, you must select a vanilla shape (eg elliptical) for the Painted Galaxy size to appear
+  [*] If you are using a mod that changes the core (eg Gigastructural Engineering), don't paint stars there
+  [*] If you are playing with the L Cluster enabled, don't paint stars in the upper right corner
+[/list]
+
+[h1]Sharing[/h1]
+Feel free to share and upload the galaxies you create, and feel free to manually edit them further to your liking. You should mark this mod as required, otherwise your subscribers will experience issues with incorrect homeworlds (I prefer you [b]not[/b] simply copy this mods code into your mod, since that could lead to conflicts if release fixes/updates). Credit and linking is appreciated.
+
+[url=https://discord.gg/bHVez2C][img]https://i.imgur.com/4Und3QN.png[/img][/url]
+Come chat in #oatmeal-mods

@@ -1,0 +1,20 @@
+namespace = painted_galaxy
+
+# correct homeworld planet class
+planet_event = {
+    id = painted_galaxy.1
+    is_triggered_only = yes
+    hide_window = yes
+    immediate = {
+        if = {
+            limit = {
+                is_artificial = no
+                is_ideal_planet_class = { who = from status = no }
+                NAND = { is_planet_class = pc_relic FROM = { has_origin = origin_shoulders_of_giants } }
+                NAND = { is_planet_class = pc_nuked FROM = { OR = { has_origin = origin_post_apocalyptic has_origin = origin_post_apocalyptic_machines } } }
+            }
+            change_pc = from
+            reset_planet = yes
+        }
+    }
+}
