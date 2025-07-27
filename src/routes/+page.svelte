@@ -12,10 +12,8 @@
 	import { dev } from '$app/environment';
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
+	import { HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
 
-	const WIDTH = 900;
-	const HEIGHT = 900;
-	const MAX_CONNECTION_LENGTH = Math.max(WIDTH, HEIGHT) / 2;
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
@@ -34,9 +32,9 @@
 					height: HEIGHT,
 					weight: untrack(() => brushSize.current),
 					mode: untrack(() => brushMode.current),
-					color: '#FFFFFF'
+					color: '#FFFFFF',
 				})
-			: null
+			: null,
 	);
 
 	type RecordedStroke = [unknown, number, number, string];
@@ -97,7 +95,7 @@
 		stroke,
 		recordedBrushSize,
 		recordedBrushBlur,
-		recordedMode
+		recordedMode,
 	]: RecordedStroke) {
 		if (!ctx || !sketchpad) return;
 		sketchpad.recordStrokes = false;
@@ -126,7 +124,7 @@
 				segment.point.y,
 				prevPoint.x,
 				prevPoint.y,
-				segment.pressure
+				segment.pressure,
 			);
 
 			// the processed position is the one where the line is actually drawn to
@@ -213,7 +211,7 @@
 		while (added.size < numberOfStars.current) {
 			if (attempts >= numberOfStars.current * 1000) {
 				console.error(
-					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars}`
+					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars}`,
 				);
 				break;
 			}
@@ -234,7 +232,7 @@
 			.force('manyBody', forceManyBody().strength(-1));
 		simulation.tick(Math.round(clusterDiffusion.current));
 		stars.current = Array.from(
-			new Set(simulation.nodes().map(({ x, y }) => [Math.round(x), Math.round(y)].toString()))
+			new Set(simulation.nodes().map(({ x, y }) => [Math.round(x), Math.round(y)].toString())),
 		).map((v) => v.split(',').map((s) => parseInt(s)) as [number, number]);
 	}
 
@@ -243,7 +241,7 @@
 	let allowDisconnected = new LocalStorageState('allowDisconnected', false);
 	let connections = new LocalStorageState<[[number, number], [number, number]][]>(
 		'connections',
-		[]
+		[],
 	);
 	let potentialHomeStars = new LocalStorageState<string[]>('potentialHomeStars', []);
 	function generateConnections() {
@@ -274,14 +272,14 @@
 				this.x = x;
 				this.y = y;
 			},
-			closePath() {}
+			closePath() {},
 		};
 		delaunay.render(renderContext);
 
 		// find minimum spanning tree
 		const mst: { fromId: string; toId: string }[] = kruskal(
 			g,
-			(link: Link<{ distance: number; isMst?: boolean }>) => link.data.distance
+			(link: Link<{ distance: number; isMst?: boolean }>) => link.data.distance,
 		);
 		for (const treeLink of mst) {
 			const link = g.getLink(treeLink.fromId, treeLink.toId);
@@ -349,7 +347,7 @@
 							edge.unshift(node.data.coords);
 						}
 					},
-					false
+					false,
 				);
 			}
 			// move this starting system to the farthest star (random for tie)
@@ -369,7 +367,7 @@
 			added.add(key);
 			connections.current.push([
 				g.getNode(link.fromId)!.data.coords,
-				g.getNode(link.toId)!.data.coords
+				g.getNode(link.toId)!.data.coords,
 			]);
 		});
 	}
@@ -379,10 +377,10 @@
 			new Blob(
 				[generateStellarisGalaxy(stars.current, connections.current, potentialHomeStars.current)],
 				{
-					type: 'text/plain'
-				}
-			)
-		)
+					type: 'text/plain',
+				},
+			),
+		),
 	);
 
 	const BUTTON_CLASS = 'cursor-pointer bg-gray-700 p-2 hover:bg-gray-600 text-center';

@@ -1,3 +1,5 @@
+import { FALLEN_EMPIRE_SPAWN_RADIUS, HEIGHT, WIDTH } from './constants';
+
 const COMMON = `
 	name = "Painted Galaxy"
 	priority = 10
@@ -142,7 +144,7 @@ const HUGE = `
 export function generateStellarisGalaxy(
 	stars: [number, number][],
 	connections: [[number, number], [number, number]][],
-	potentialHomeStars: string[]
+	potentialHomeStars: string[],
 ): string {
 	let sizeBasedSettings = TINY;
 	if (stars.length >= 400) sizeBasedSettings = SMALL;
@@ -150,26 +152,94 @@ export function generateStellarisGalaxy(
 	if (stars.length >= 800) sizeBasedSettings = LARGE;
 	if (stars.length >= 1000) sizeBasedSettings = HUGE;
 
+	const fallenEmpireSpawns: { star: [number, number]; direction: 'n' | 'e' | 's' | 'w' }[] = [];
+	for (const star of stars) {
+		for (const direction of ['n', 'e', 's', 'w'] as const) {
+			if (
+				canSpawnFallenEmpireInDirection(
+					star,
+					direction,
+					stars,
+					fallenEmpireSpawns.map((fe) => getFallenEmpireOrigin(fe.star, fe.direction)),
+				)
+			) {
+				fallenEmpireSpawns.push({ star, direction });
+			}
+		}
+	}
+
 	const keyToId = Object.fromEntries(stars.map((coords, i) => [coords.toString(), i]));
 
 	const systems = stars
-		.map(
-			(star, i) =>
-				`\tsystem = { id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - 450)} y = ${star[1] - 450} } ${potentialHomeStars.includes(star.toString()) ? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 1 }` : ''} }`
-		)
+		.map((star, i) => {
+			const basics = `id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - WIDTH / 2)} y = ${star[1] - HEIGHT / 2} }`;
+			const empireSpawn = potentialHomeStars.includes(star.toString())
+				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 1 }`
+				: '';
+			const thisStarFallenEmpireSpawns = fallenEmpireSpawns.filter((fe) => fe.star === star);
+			const effect =
+				thisStarFallenEmpireSpawns.length > 0
+					? `effect = { set_star_flag = painted_galaxy_fe_spawn ${thisStarFallenEmpireSpawns.map((fe) => `set_star_flag = painted_galaxy_fe_spawn_${fe.direction}`).join(' ')} }`
+					: '';
+			return `\tsystem = { ${basics} ${empireSpawn} ${effect} }`;
+		})
 		.join('\n');
 	const hyperlanes = connections
 		.map(
 			([a, b]) =>
-				`\tadd_hyperlane = { from = "${keyToId[a.toString()]}" to = "${keyToId[b.toString()]}" }`
+				`\tadd_hyperlane = { from = "${keyToId[a.toString()]}" to = "${keyToId[b.toString()]}" }`,
 		)
 		.join('\n');
 	return [`static_galaxy_scenario = {`, COMMON, sizeBasedSettings, systems, hyperlanes, '}'].join(
-		'\n\n'
+		'\n\n',
 	);
 }
 
 export function calcNumStartingStars(stars: [number, number][]) {
 	// 6 per 200 is the vanilla num_empires max, but some origins spawn additional empires, so let's double this to be safe
 	return Math.ceil((stars.length / 200) * 6) * 2;
+}
+
+function getFallenEmpireOrigin(
+	star: [number, number],
+	direction: 'n' | 's' | 'e' | 'w',
+): [number, number] {
+	switch (direction) {
+		case 'n':
+			return [star[0], star[1] - FALLEN_EMPIRE_SPAWN_RADIUS];
+		case 's':
+			return [star[0], star[1] + FALLEN_EMPIRE_SPAWN_RADIUS];
+		case 'e':
+			return [star[0] + FALLEN_EMPIRE_SPAWN_RADIUS, star[1]];
+		case 'w':
+			return [star[0] - FALLEN_EMPIRE_SPAWN_RADIUS, star[1]];
+	}
+}
+
+function canSpawnFallenEmpireInDirection(
+	star: [number, number],
+	direction: 'n' | 's' | 'e' | 'w',
+	stars: [number, number][],
+	fallenEmpireSpawns: [number, number][],
+) {
+	const origin = getFallenEmpireOrigin(star, direction);
+	// origin is not near edge of canvas
+	if (
+		origin[0] < FALLEN_EMPIRE_SPAWN_RADIUS ||
+		origin[0] > WIDTH - FALLEN_EMPIRE_SPAWN_RADIUS ||
+		origin[1] < FALLEN_EMPIRE_SPAWN_RADIUS ||
+		origin[1] > HEIGHT - FALLEN_EMPIRE_SPAWN_RADIUS
+	)
+		return false;
+	// spawn area does not contain any stars or overlap with another fallen empire spawn area
+	return (
+		stars.every(
+			(point) =>
+				Math.hypot(point[0] - origin[0], point[1] - origin[1]) >= FALLEN_EMPIRE_SPAWN_RADIUS,
+		) &&
+		fallenEmpireSpawns.every(
+			(point) =>
+				Math.hypot(point[0] - origin[0], point[1] - origin[1]) >= FALLEN_EMPIRE_SPAWN_RADIUS * 2,
+		)
+	);
 }

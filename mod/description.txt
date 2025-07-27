@@ -32,17 +32,25 @@ This mod does [b]nothing[/b] on it's own. You use it alongside [url=https://oatm
 [h1]Known Issues[/h1]
 [list]
   [*] You [b]must[/b] activate this mod too, otherwise many empires will have incorrect homeworlds (eg gas giants, etc)
-  [*] Fallen Empires do not spawn (will fix)
-  [*] Marauders spawn with only system each (will fix)
+  [*] Some things need to create additional solar systems, so you'll see some in-game that were not in the map preview:
+  [list]
+    [*] Fallen Empire starting systems (if Fallen Empires enabled)
+    [*] Fallen Empire holy worlds (if spiritualist Fallen Empire spawned)
+    [*] Origin federation members
+  [/list]
+  [*] Marauders spawn with only one system each (will fix)
   [*] No nebulas (will fix)
-  [*] Guaranteed habitable planets do not work. This is a limitation of static galaxies without a simple solution. (might fix)
-  [*] Federation origins do not work unless you turn guaranteed habitable planets off (would be fixed by the above fix)
+  [*] Advanced AIs do not start with additional systems (will fix)
+  [*] Guaranteed habitable planets do not work. This is a limitation of static galaxies without a simple solution. (will fix)
+  [*] Federation origins do not work unless you turn guaranteed habitable planets off (will be fixed by the above fix)
+  [*] You might spawn next to unique/event systems (might fix)
 [/list]
 
 [h1]Compatibility[/h1]
 [list]
   [*] Should be compatible with most mods
   [*] If you are using a mod that adds galaxy shapes, you must select a vanilla shape (eg elliptical) for the Painted Galaxy size to appear
+  [*] Mods that edit common/fallen_empires have minor incompatibilities (I only know of Ancient Cache of Technologies and Ethics & Civics: Bug Branch; I will coordinate with these authors to fix)
   [*] If you are using a mod that changes the core (eg Gigastructural Engineering), don't paint stars there
   [*] If you are playing with the L Cluster enabled, don't paint stars in the upper right corner
 [/list]

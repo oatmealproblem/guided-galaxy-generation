@@ -1,0 +1,368 @@
+painted_galaxy_spawn_fe_home_system = {
+	remove_star_flag = painted_galaxy_fe_spawn
+	if = {
+		limit = { has_star_flag = painted_galaxy_fe_spawn_e }
+		spawn_system = {
+			initializer = $INITIALIZER$
+			min_distance = 50
+			max_distance = 50
+			min_orientation_angle = 0
+			max_orientation_angle = 0
+		}
+	} else_if = {
+		limit = { has_star_flag = painted_galaxy_fe_spawn_n }
+		spawn_system = {
+			initializer = $INITIALIZER$
+			min_distance = 50
+			max_distance = 50
+			min_orientation_angle = 90
+			max_orientation_angle = 90
+		}
+	} else_if = {
+		limit = { has_star_flag = painted_galaxy_fe_spawn_w }
+		spawn_system = {
+			initializer = $INITIALIZER$
+			min_distance = 50
+			max_distance = 50
+			min_orientation_angle = 180
+			max_orientation_angle = 180
+		}
+	} else_if = {
+		limit = { has_star_flag = painted_galaxy_fe_spawn_s }
+		spawn_system = {
+			initializer = $INITIALIZER$
+			min_distance = 50
+			max_distance = 50
+			min_orientation_angle = 270
+			max_orientation_angle = 270
+		}
+	}
+}
+
+painted_galaxy_spawn_fe_system = {
+	spawn_system = {
+		initializer = $INITIALIZER$
+		effect = {
+			if = {
+				limit = { NOT = { has_hyperlane_to = prev } }
+				add_hyperlane = { from = this to = prev }
+			}
+		}
+	}
+}
+
+painted_galaxy_create_materialist_fe = {
+	create_species = {
+		name = random
+		class = random_non_machine
+		portrait = random
+		traits = random
+		extra_trait_points = 3
+		allow_negative_traits = no
+	}
+	last_created_species = {
+		modify_species = {
+			species = this
+			add_trait = trait_cybernetic
+		}
+	}
+	if = {
+		limit = {
+			has_machine_age_dlc = yes
+		}
+		last_created_species = {
+			set_random_cybernetic_portrait_effect = yes
+		}
+	}
+	create_country = {
+		name = random
+		type = fallen_empire
+		ignore_initial_colony_error = yes
+		authority = auth_imperial
+		civics = {
+			civic = civic_lethargic_leadership
+			civic = civic_empire_in_decline
+		}
+		species = last_created_species
+		ethos = {
+			ethic = ethic_fanatic_materialist
+		}
+		flag = random
+		origin = "origin_fallen_empire"
+		effect = {
+			set_country_flag = fallen_empire_1
+			add_resource = {
+				minerals = 10000
+				energy = 10000
+				food = 1000
+				influence = 500
+			}
+			# must initialize global designs here
+			add_global_ship_design = "NAME_Enforcer"
+			add_global_ship_design = "NAME_Savant"
+			add_global_ship_design = "NAME_Scholar"
+			add_global_ship_design = "NAME_Sage"
+			add_global_ship_design = "NAME_Cloaker"
+			add_global_ship_design = "NAME_Librarian"
+			add_global_ship_design = "NAME_Seeker"
+			add_global_ship_design = "NAME_FE_MATERIALIST_Citadel_1"
+			add_global_ship_design = "NAME_FE_MATERIALIST_Citadel_2"
+			add_global_ship_design = "NAME_FE_MATERIALIST_Citadel_3"
+			add_global_ship_design = "NAME_FE_Starbase"
+			ruler = {
+				add_skill = 9
+			}
+		}
+	}
+}
+
+painted_galaxy_create_spiritualist_fe = {
+	create_species = {
+		name = random
+		class = random_non_machine
+		portrait = random
+		traits = random
+		extra_trait_points = 3
+		allow_negative_traits = no
+	}
+	last_created_species = {
+		modify_species = {
+			species = this
+			add_trait = trait_psionic
+		}
+	}
+	create_country = {
+		name = random
+		type = fallen_empire
+		ignore_initial_colony_error = yes
+		authority = auth_imperial
+		civics = {
+			civic = civic_lethargic_leadership
+			civic = civic_empire_in_decline
+		}
+		species = last_created_species
+		ethos = {
+			ethic = ethic_fanatic_spiritualist
+		}
+		flag = random
+		origin = "origin_fallen_empire"
+		effect = {
+			set_country_flag = fallen_empire_2
+			add_resource = {
+				minerals = 10000
+				energy = 10000
+				food = 1000
+				influence = 500
+			}
+			# must initialize global designs here
+			add_global_ship_design = "NAME_Cleanser"
+			add_global_ship_design = "NAME_Eternal"
+			add_global_ship_design = "NAME_Avatar"
+			add_global_ship_design = "NAME_Zealot"
+			add_global_ship_design = "NAME_Penitent"
+			add_global_ship_design = "NAME_Faith"
+			add_global_ship_design = "NAME_Pilgrim"
+			add_global_ship_design = "NAME_FE_SPIRITUALIST_Citadel_1"
+			add_global_ship_design = "NAME_FE_SPIRITUALIST_Citadel_2"
+			add_global_ship_design = "NAME_FE_SPIRITUALIST_Citadel_3"
+			add_global_ship_design = "NAME_FE_Starbase"
+			ruler = {
+				add_skill = 9
+			}
+		}
+	}
+}
+
+painted_galaxy_create_xenophile_fe = {
+	create_species = {
+		name = random
+		class = random_non_machine
+		portrait = random
+		traits = random
+		extra_trait_points = 5
+		allow_negative_traits = no
+	}
+	create_country = {
+		name = random
+		type = fallen_empire
+		ignore_initial_colony_error = yes
+		authority = auth_imperial
+		civics = {
+			civic = civic_lethargic_leadership
+			civic = civic_empire_in_decline
+		}
+		species = last_created_species
+		ethos = {
+			ethic = ethic_fanatic_xenophile
+		}
+		flag = random
+		origin = "origin_fallen_empire"
+		effect = {
+			set_country_flag = fallen_empire_3
+			add_resource = {
+				minerals = 10000
+				energy = 10000
+				food = 1000
+				influence = 500
+			}
+			# must initialize global designs here
+			add_global_ship_design = "NAME_Adjuster"
+			add_global_ship_design = "NAME_Keeper"
+			add_global_ship_design = "NAME_Custodian"
+			add_global_ship_design = "NAME_Overseer"
+			add_global_ship_design = "NAME_Watcher"
+			add_global_ship_design = "NAME_Seeder"
+			add_global_ship_design = "NAME_Builder"
+			add_global_ship_design = "NAME_FE_XENOPHILE_Citadel_1"
+			add_global_ship_design = "NAME_FE_XENOPHILE_Citadel_2"
+			add_global_ship_design = "NAME_FE_XENOPHILE_Citadel_3"
+			add_global_ship_design = "NAME_FE_Starbase"
+			ruler = {
+				add_skill = 9
+			}
+		}
+	}
+}
+
+painted_galaxy_create_xenophobe_fe = {
+	create_species = {
+		name = random
+		class = random_non_machine
+		portrait = random
+		traits = random
+		extra_trait_points = 5
+		allow_negative_traits = no
+		effect = { save_global_event_target_as = fallen_4_species }
+	}
+	create_country = {
+		name = random
+		type = fallen_empire
+		ignore_initial_colony_error = yes
+		authority = auth_imperial
+		civics = {
+			civic = civic_lethargic_leadership
+			civic = civic_empire_in_decline
+		}
+		species = last_created_species
+		ethos = {
+			ethic = ethic_fanatic_xenophobe
+		}
+		flag = random
+		origin = "origin_fallen_empire"
+		effect = {
+			set_country_flag = fallen_empire_4
+			add_resource = {
+				minerals = 10000
+				energy = 10000
+				food = 1000
+				influence = 500
+			}
+			# must initialize global designs here
+			add_global_ship_design = "NAME_Reaper"
+			add_global_ship_design = "NAME_Imperium"
+			add_global_ship_design = "NAME_Supremacy"
+			add_global_ship_design = "NAME_Glory"
+			add_global_ship_design = "NAME_Devastator"
+			add_global_ship_design = "NAME_Servitor"
+			add_global_ship_design = "NAME_Destiny"
+			add_global_ship_design = "NAME_FE_XENOPHOBE_Citadel_1"
+			add_global_ship_design = "NAME_FE_XENOPHOBE_Citadel_2"
+			add_global_ship_design = "NAME_FE_XENOPHOBE_Citadel_3"
+			add_global_ship_design = "NAME_FE_Starbase"
+			ruler = {
+				add_skill = 9
+			}
+		}
+	}
+}
+
+painted_galaxy_create_machine_fe = {
+	create_species = {
+		name = random
+		class = MACHINE
+		namelist = MACHINE3
+		portrait = random
+		traits = {
+			ideal_planet_class = pc_ringworld_habitable
+			trait = trait_machine_unit
+			trait = random_traits
+		}
+		extra_trait_points = 3
+		allow_negative_traits = no
+	}
+	create_country = {
+		name = random
+		type = fallen_empire
+		ignore_initial_colony_error = yes
+		authority = auth_machine_intelligence
+		civics = {
+			civic = civic_machine_remnants
+			civic = civic_custodian_directives
+		}
+		species = last_created_species
+		ethos = {
+			ethic = ethic_gestalt_consciousness
+		}
+		flag = random
+		origin = "origin_fallen_empire"
+		effect = {
+			set_country_flag = fallen_empire_machine
+			add_resource = {
+				minerals = 10000
+				energy = 10000
+				food = 1000
+				influence = 500
+			}
+			# must initialize global designs here
+			add_global_ship_design = "NAME_Omega"
+			add_global_ship_design = "NAME_Alpha"
+			add_global_ship_design = "NAME_Beta"
+			add_global_ship_design = "NAME_Gamma"
+			add_global_ship_design = "NAME_Theta"
+			add_global_ship_design = "NAME_Tau"
+			add_global_ship_design = "NAME_Sigma"
+			add_global_ship_design = "NAME_FE_MACHINE_Citadel_1"
+			add_global_ship_design = "NAME_FE_MACHINE_Citadel_2"
+			add_global_ship_design = "NAME_FE_MACHINE_Citadel_3"
+			add_global_ship_design = "NAME_FE_Starbase"
+			ruler = {
+				add_skill = 9
+			}
+		}
+	}
+}
+
+painted_galaxy_create_hive_fe = {
+	set_global_flag = hive_fe_spawned
+	create_species = {
+		name = random
+		class = random_non_machine
+		namelist = HIVE2
+		portrait = random
+		traits = {
+			ideal_planet_class = pc_hive
+			trait = trait_hive_mind
+			trait = random_traits
+		}
+		extra_trait_points = 3
+		allow_negative_traits = no
+		effect = {
+			save_global_event_target_as = hive_fe_species
+		}
+	}
+	random_list = { #Future proofing if we want multiple personalities
+		1 = { # War
+			create_hive_fe_fragment_war = yes
+		}
+		1 = { # Growth
+			create_hive_fe_fragment_growth = yes
+		}
+		1 = { # Control
+			create_hive_fe_fragment_control = yes
+		}
+	}
+	last_created_country = {
+		set_country_flag = first_hive_fe_fragment
+		country_event = { id = bio.3010 days = 1 }
+	}
+}
