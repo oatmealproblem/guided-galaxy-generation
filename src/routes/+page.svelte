@@ -445,8 +445,17 @@
 					y1={from[1]}
 					x2={to[0]}
 					y2={to[1]}
+					stroke="var(--color-gray-900)"
+					stroke-opacity="0.5"
+					stroke-width="3"
+				/>
+				<line
+					x1={from[0]}
+					y1={from[1]}
+					x2={to[0]}
+					y2={to[1]}
 					stroke="#FFFFFF"
-					stroke-opacity="0.25"
+					stroke-opacity="0.5"
 					stroke-width="1"
 				/>
 			{/each}
