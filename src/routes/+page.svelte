@@ -1,13 +1,11 @@
 <script lang="ts">
-	// @ts-expect-error -- no 1st or 3rd party types available
-	import Atrament, { MODE_DRAW, MODE_ERASE } from 'atrament';
-
+	import { getStroke } from 'perfect-freehand';
 	import { Delaunay } from 'd3-delaunay';
 	import { forceManyBody, forceSimulation } from 'd3-force';
 	import createGraph, { type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
-	import { onMount, untrack } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { dev } from '$app/environment';
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
@@ -17,46 +15,70 @@
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
-	let brushSize = new LocalStorageState('brushSize', 10);
-	let brushBlur = new LocalStorageState('brushBlur', 3);
-	let brushMode = new LocalStorageState('brushMode', MODE_DRAW);
-	let filter = $derived(`blur(${brushSize.current * brushBlur.current}px)`);
-	$effect(() => {
-		if (ctx) ctx.filter = filter;
-	});
+	const MODE_DRAW = 'draw';
+	const MODE_ERASE = 'erase';
+	type BrushMode = typeof MODE_DRAW | typeof MODE_ERASE;
 
-	let sketchpad = $derived(
-		canvas
-			? new Atrament(canvas, {
-					width: WIDTH,
-					height: HEIGHT,
-					weight: untrack(() => brushSize.current),
-					mode: untrack(() => brushMode.current),
-					color: '#FFFFFF',
-				})
-			: null,
+	let brushSize = new LocalStorageState('brushSize', 25);
+	let brushOpacity = new LocalStorageState('brushOpacity', 0.5);
+	let brushBlur = new LocalStorageState('brushBlur', 0);
+	let brushMode = new LocalStorageState<BrushMode>('brushMode', MODE_DRAW);
+
+	let strokePoints = $state<{ x: number; y: number }[]>([]);
+	let stroke = $derived(
+		getStroke(strokePoints, {
+			size: brushSize.current,
+			thinning: 0.5,
+			streamline: 0.5,
+			smoothing: 1,
+		}),
 	);
+	function makePathData(stroke: number[][]) {
+		if (stroke.length === 0) return '';
+		return stroke
+			.reduce(
+				(acc, [x0, y0], i, arr) => {
+					if (i === arr.length - 1) return acc;
+					const [x1, y1] = arr[i + 1];
+					return acc.concat(` ${x0},${y0} ${(x0 + x1) / 2},${(y0 + y1) / 2}`);
+				},
+				['M ', `${stroke[0][0]},${stroke[0][1]}`, ' Q'],
+			)
+			.concat('Z')
+			.join('');
+	}
+	let strokePath = $derived(makePathData(stroke));
 
-	type RecordedStroke = [unknown, number, number, string];
+	type StrokeConfig = {
+		size: number;
+		blur: number;
+		mode: BrushMode;
+		opacity: number;
+	};
+	type RecordedStroke = {
+		points: { x: number; y: number }[];
+		config: StrokeConfig;
+	};
 	let strokes = $state<RecordedStroke[]>([]);
 	let imageDataStack = $state<ImageData[]>([]);
 	let undoneStrokes = $state<RecordedStroke[]>([]);
 	let imageDataUndoStack = $state<ImageData[]>([]);
 
-	$effect(() => {
-		if (!sketchpad) return;
-		function strokeHandler({ stroke }: { stroke: unknown }) {
-			strokes.push([stroke, brushSize.current, brushBlur.current, brushMode.current]);
-			pushImageData();
-			undoneStrokes.length = 0;
-			imageDataUndoStack.length = 0;
-			saveCanvas();
-		}
-		sketchpad.recordStrokes = true;
-		sketchpad.addEventListener('strokerecorded', strokeHandler);
-
-		return () => sketchpad.removeEventListener('strokerecorded', strokeHandler);
-	});
+	function recordStroke() {
+		strokes.push({
+			points: strokePoints.slice(),
+			config: {
+				size: brushSize.current,
+				blur: brushBlur.current,
+				mode: brushMode.current,
+				opacity: brushOpacity.current,
+			},
+		});
+		pushImageData();
+		undoneStrokes.length = 0;
+		imageDataUndoStack.length = 0;
+		saveCanvas();
+	}
 
 	const MAX_IMAGE_DATA_STACK_SIZE = 10;
 	function pushImageData() {
@@ -80,78 +102,60 @@
 				.then((blob) => createImageBitmap(blob))
 				.then((bitmap) => {
 					if (ctx) {
-						sketchpad.mode = MODE_DRAW;
 						ctx.drawImage(bitmap, 0, 0);
-						ctx.filter = filter;
-						sketchpad.mode = brushMode.current;
 					}
 				});
-		} else if (ctx) {
-			ctx.filter = filter;
 		}
 	});
 
-	function drawRecordedStroke([
-		stroke,
-		recordedBrushSize,
-		recordedBrushBlur,
-		recordedMode,
-	]: RecordedStroke) {
-		if (!ctx || !sketchpad) return;
-		sketchpad.recordStrokes = false;
-		sketchpad.weight = recordedBrushSize;
-		sketchpad.mode = recordedMode;
-		ctx.filter = `blur(${recordedBrushSize * recordedBrushBlur}px)`;
-
-		// don't want to modify original data
-		const segments = (
-			stroke as { segments: { pressure: number; point: { x: number; y: number } }[] }
-		).segments.slice();
-
-		const firstPoint = segments.shift()!.point;
-		// beginStroke moves the "pen" to the given position and starts the path
-		sketchpad.beginStroke(firstPoint.x, firstPoint.y);
-
-		let prevPoint = firstPoint;
-		while (segments.length > 0) {
-			const segment = segments.shift()!;
-
-			// the `draw` method accepts the current real coordinates
-			// (i. e. actual cursor position), and the previous processed (filtered)
-			// position. It returns an object with the current processed position.
-			const { x, y } = sketchpad.draw(
-				segment.point.x,
-				segment.point.y,
-				prevPoint.x,
-				prevPoint.y,
-				segment.pressure,
-			);
-
-			// the processed position is the one where the line is actually drawn to
-			// so we have to store it and pass it to `draw` in the next step
-			prevPoint = { x, y };
+	function drawStroke(path: string, config: StrokeConfig) {
+		if (!ctx) return;
+		const p = new Path2D(strokePath);
+		ctx.globalAlpha = config.opacity;
+		// big blur on erase mode feels like the eraser just isn't working; multiply by 0.5 to compensate
+		ctx.filter = `blur(${config.size * config.blur * (config.mode === MODE_ERASE ? 0.5 : 1)}px)`;
+		ctx.fillStyle = config.mode === MODE_DRAW ? '#FFFFFF' : '#000000';
+		ctx.fill(p);
+		if (config.mode === MODE_ERASE) {
+			ctx.save();
+			ctx.clip(p);
+			const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+			for (let i = 0; i < imageData.data.length; i += 4) {
+				// convert grayscale to transparency
+				imageData.data[i + 3] = Math.round((imageData.data[i] / 255) * imageData.data[i + 3]);
+				imageData.data[i] = 255;
+				imageData.data[i + 1] = 255;
+				imageData.data[i + 2] = 255;
+			}
+			ctx.putImageData(imageData, 0, 0);
+			ctx.restore();
 		}
+	}
 
-		// endStroke closes the path
-		sketchpad.endStroke(prevPoint.x, prevPoint.y);
-
-		sketchpad.recordStrokes = true;
-		sketchpad.weight = brushSize.current;
-		sketchpad.mode = brushMode.current;
-		ctx.filter = filter;
+	function drawRecordedStroke(stroke: RecordedStroke) {
+		if (!ctx) return;
+		const p = makePathData(
+			getStroke(stroke.points, {
+				size: stroke.config.size,
+				thinning: 0.5,
+				streamline: 0.5,
+				smoothing: 1,
+			}),
+		);
+		drawStroke(p, stroke.config);
 	}
 
 	function redraw() {
-		if (!sketchpad || !ctx) return;
-		sketchpad.clear();
+		if (!ctx) return;
+		ctx.clearRect(0, 0, WIDTH, HEIGHT);
 		for (const stroke of strokes) {
 			drawRecordedStroke(stroke);
 		}
 	}
 
 	function undo() {
-		if (!sketchpad) return;
-		if (strokes.length) undoneStrokes.push(strokes.pop()!);
+		if (!strokes.length) return;
+		undoneStrokes.push(strokes.pop()!);
 		if (imageDataStack.length) imageDataUndoStack.push(imageDataStack.pop()!);
 		const lastImageData = imageDataStack.at(-1);
 		if (lastImageData) {
@@ -165,7 +169,6 @@
 	}
 
 	function redo() {
-		if (!sketchpad) return;
 		if (undoneStrokes.length) {
 			const stroke = undoneStrokes.pop()!;
 			const imageData = imageDataUndoStack.pop();
@@ -183,8 +186,8 @@
 	}
 
 	function clear() {
-		if (!sketchpad) return;
-		sketchpad.clear();
+		if (!ctx) return;
+		ctx.clearRect(0, 0, WIDTH, HEIGHT);
 		strokes.length = 0;
 		undoneStrokes.length = 0;
 		imageDataStack.length = 0;
@@ -398,74 +401,84 @@
 			redo();
 		}
 	}}
+	onpointerup={() => {
+		if (ctx && strokePoints.length) {
+			drawStroke(strokePath, {
+				size: brushSize.current,
+				blur: brushBlur.current,
+				mode: brushMode.current,
+				opacity: brushOpacity.current,
+			});
+			recordStroke();
+			strokePoints = [];
+		}
+	}}
 />
 
-<div class="relative flex">
-	<canvas width={WIDTH} height={HEIGHT} bind:this={canvas} class="border border-white"></canvas>
-	<svg
-		class="pointer-events-none absolute top-0 left-0"
-		viewBox="0 0 {WIDTH} {HEIGHT}"
-		width={WIDTH}
-		height={HEIGHT}
-	>
-		{#each connections.current as [from, to] (`${[from, to]}`)}
-			<line
-				x1={from[0]}
-				y1={from[1]}
-				x2={to[0]}
-				y2={to[1]}
-				stroke="#FFFFFF"
-				stroke-opacity="0.25"
-				stroke-width="1"
+<div class="flex">
+	<div class="relative box-content border border-white" style:width={WIDTH} style:height={HEIGHT}>
+		<canvas
+			width={WIDTH}
+			height={HEIGHT}
+			bind:this={canvas}
+			onpointerdown={(e) => {
+				strokePoints = [{ x: e.offsetX, y: e.offsetY }];
+			}}
+			onpointermove={(e) => {
+				if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
+			}}
+		></canvas>
+		<svg
+			class="pointer-events-none absolute top-0 left-0"
+			viewBox="0 0 {WIDTH} {HEIGHT}"
+			width={WIDTH}
+			height={HEIGHT}
+		>
+			<path
+				d={strokePath}
+				fill={brushMode.current === MODE_DRAW ? '#FFFFFF' : 'var(--color-gray-900)'}
+				opacity={brushOpacity.current}
 			/>
-		{/each}
-		{#each stars.current as [x, y] (`${[x, y]}`)}
-			<circle
-				cx={x}
-				cy={y}
-				r="2"
-				fill={dev && potentialHomeStars.current.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
-				stroke="#000000"
-				stroke-width="1"
-			/>
-		{/each}
-	</svg>
+			{#each connections.current as [from, to] (`${[from, to]}`)}
+				<line
+					x1={from[0]}
+					y1={from[1]}
+					x2={to[0]}
+					y2={to[1]}
+					stroke="#FFFFFF"
+					stroke-opacity="0.25"
+					stroke-width="1"
+				/>
+			{/each}
+			{#each stars.current as [x, y] (`${[x, y]}`)}
+				<circle
+					cx={x}
+					cy={y}
+					r="2"
+					fill={dev && potentialHomeStars.current.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
+					stroke="#000000"
+					stroke-width="1"
+				/>
+			{/each}
+		</svg>
+	</div>
 	<form class="flex flex-col gap-2 p-4">
 		<h2 class="text-2xl">Paint</h2>
 		<label>
 			Brush Size
-			<input
-				type="range"
-				min={1}
-				max={20}
-				step={1}
-				bind:value={
-					() => brushSize.current,
-					(value) => {
-						brushSize.current = value;
-						if (sketchpad) {
-							sketchpad.weight = value;
-						}
-					}
-				}
-			/>
+			<input type="range" min={1} max={100} step={1} bind:value={brushSize.current} />
+		</label>
+		<label>
+			Brush Opacity
+			<input type="range" min={0} max={1} step={0.01} bind:value={brushOpacity.current} />
 		</label>
 		<label>
 			Brush Blur
-			<input type="range" min={0} max={3} step={0.1} bind:value={brushBlur.current} />
+			<input type="range" min={0} max={2} step={0.1} bind:value={brushBlur.current} />
 		</label>
 		<label>
 			Mode
-			<select
-				class="bg-gray-800"
-				bind:value={
-					() => brushMode.current,
-					(value) => {
-						brushMode.current = value;
-						sketchpad.mode = value;
-					}
-				}
-			>
+			<select class="bg-gray-800" bind:value={brushMode.current}>
 				<option>{MODE_DRAW}</option>
 				<option>{MODE_ERASE}</option>
 			</select>

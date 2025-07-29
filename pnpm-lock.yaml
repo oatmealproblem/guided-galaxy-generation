@@ -35,9 +35,6 @@ importers:
       '@types/d3-force':
         specifier: ^3.0.10
         version: 3.0.10
-      atrament:
-        specifier: ^5.0.0
-        version: 5.0.0
       d3-delaunay:
         specifier: ^6.0.4
         version: 6.0.4
@@ -62,6 +59,9 @@ importers:
       ngraph.kruskal:
         specifier: ^1.1.0
         version: 1.1.0
+      perfect-freehand:
+        specifier: ^1.2.2
+        version: 1.2.2
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
@@ -681,9 +681,6 @@ packages:
     resolution: {integrity: sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw==}
     engines: {node: '>= 0.4'}
 
-  atrament@5.0.0:
-    resolution: {integrity: sha512-I+bnEhMpJ2P6G83MDitTpxQEAvI+8MTI83fiymi5M9yId3mmHd0FhvCfDaJUMG3JHowwIVRTjW+Dh0/5mHnaxw==}
-
   axobject-query@4.1.0:
     resolution: {integrity: sha512-qIj0G9wZbMGNLjLmg1PT6v2mE9AH2zlnADJD/2tC6E00hgmhUOfEB6greHPAfLRSufHqROIUTkw6E+M3lH0PTQ==}
     engines: {node: '>= 0.4'}
@@ -1173,6 +1170,9 @@ packages:
   path-key@3.1.1:
     resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
     engines: {node: '>=8'}
+
+  perfect-freehand@1.2.2:
+    resolution: {integrity: sha512-eh31l019WICQ03pkF3FSzHxB8n07ItqIQ++G5UV8JX0zVOXzgTGCqnRR0jJ2h9U8/2uW4W4mtGJELt9kEV0CFQ==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -1998,8 +1998,6 @@ snapshots:
 
   aria-query@5.3.2: {}
 
-  atrament@5.0.0: {}
-
   axobject-query@4.1.0: {}
 
   balanced-match@1.0.2: {}
@@ -2458,6 +2456,8 @@ snapshots:
   path-exists@4.0.0: {}
 
   path-key@3.1.1: {}
+
+  perfect-freehand@1.2.2: {}
 
   picocolors@1.1.1: {}
 
