@@ -15,6 +15,25 @@
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
 
+	const Step = {
+		PAINT: 'PAINT',
+		STARS: 'STARS',
+		HYPERLANES: 'HYPERLANES',
+		MOD: 'MOD',
+	} as const;
+	type Step = (typeof Step)[keyof typeof Step];
+	let paintStepOpen = $state(true);
+	let starsStepOpen = $state(false);
+	let hyperlanesStepOpen = $state(false);
+	let modStepOpen = $state(false);
+	let step = $derived.by(() => {
+		if (paintStepOpen) return Step.PAINT;
+		if (starsStepOpen) return Step.STARS;
+		if (hyperlanesStepOpen) return Step.HYPERLANES;
+		if (modStepOpen) return Step.MOD;
+		return null;
+	});
+
 	const MODE_DRAW = 'draw';
 	const MODE_ERASE = 'erase';
 	type BrushMode = typeof MODE_DRAW | typeof MODE_ERASE;
@@ -161,22 +180,25 @@
 	}
 
 	function undo() {
-		if (!strokes.length) return;
-		undoneStrokes.push(strokes.pop()!);
-		if (imageDataStack.length) imageDataUndoStack.push(imageDataStack.pop()!);
-		const lastImageData = imageDataStack.at(-1);
-		if (lastImageData) {
-			ctx?.clearRect(0, 0, WIDTH, HEIGHT);
-			ctx?.putImageData(lastImageData, 0, 0);
-			saveCanvas();
-		} else {
-			redraw();
-			saveCanvas();
+		if (step === Step.PAINT) {
+			if (!strokes.length) return;
+			undoneStrokes.push(strokes.pop()!);
+			if (imageDataStack.length) imageDataUndoStack.push(imageDataStack.pop()!);
+			const lastImageData = imageDataStack.at(-1);
+			if (lastImageData) {
+				ctx?.clearRect(0, 0, WIDTH, HEIGHT);
+				ctx?.putImageData(lastImageData, 0, 0);
+				saveCanvas();
+			} else {
+				redraw();
+				saveCanvas();
+			}
 		}
 	}
 
 	function redo() {
-		if (undoneStrokes.length) {
+		if (step === Step.PAINT) {
+			if (!undoneStrokes.length) return;
 			const stroke = undoneStrokes.pop()!;
 			const imageData = imageDataUndoStack.pop();
 			if (imageData) {
@@ -392,8 +414,8 @@
 			),
 		),
 	);
-
-	const BUTTON_CLASS = 'cursor-pointer bg-gray-700 p-2 hover:bg-gray-600 text-center';
+	let downloadDisabled = $derived(stars.current.length === 0 || connections.current.length === 0);
+	let downloadLink = $state<HTMLAnchorElement>();
 </script>
 
 <svelte:document
@@ -422,28 +444,29 @@
 	}}
 />
 
-<div class="flex">
-	<div class="relative box-content border border-white" style:width={WIDTH} style:height={HEIGHT}>
+<div class="container">
+	<div class="canvas" style:width={WIDTH} style:height={HEIGHT}>
 		<canvas
 			width={WIDTH}
 			height={HEIGHT}
 			bind:this={canvas}
 			onpointerdown={(e) => {
-				strokePoints = [{ x: e.offsetX, y: e.offsetY }];
+				if (step === Step.PAINT) {
+					strokePoints = [{ x: e.offsetX, y: e.offsetY }];
+				}
 			}}
 			onpointermove={(e) => {
-				if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
+				if (step === Step.PAINT) {
+					if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
+				}
 			}}
+			style:opacity={step === Step.PAINT ? '100%' : '50%'}
+			style:cursor={step === Step.PAINT ? 'pointer' : ''}
 		></canvas>
-		<svg
-			class="pointer-events-none absolute top-0 left-0"
-			viewBox="0 0 {WIDTH} {HEIGHT}"
-			width={WIDTH}
-			height={HEIGHT}
-		>
+		<svg viewBox="0 0 {WIDTH} {HEIGHT}" width={WIDTH} height={HEIGHT}>
 			<path
 				d={strokePath}
-				fill={brushMode.current === MODE_DRAW ? '#FFFFFF' : 'var(--color-gray-900)'}
+				fill={brushMode.current === MODE_DRAW ? '#FFFFFF' : 'var(--pico-background-color)'}
 				opacity={brushOpacity.current}
 			/>
 			{#each connections.current as [from, to] (`${[from, to]}`)}
@@ -452,7 +475,7 @@
 					y1={from[1]}
 					x2={to[0]}
 					y2={to[1]}
-					stroke="var(--color-gray-900)"
+					stroke="var(--pico-background-color)"
 					stroke-opacity="0.5"
 					stroke-width="3"
 				/>
@@ -478,78 +501,169 @@
 			{/each}
 		</svg>
 	</div>
-	<form class="flex flex-col gap-2 p-4">
-		<h2 class="text-2xl">Paint</h2>
-		<label>
-			Brush Size
-			<input type="range" min={1} max={100} step={1} bind:value={brushSize.current} />
-		</label>
-		<label>
-			Brush Opacity
-			<input type="range" min={0} max={1} step={0.01} bind:value={brushOpacity.current} />
-		</label>
-		<label>
-			Brush Blur
-			<input type="range" min={0} max={2} step={0.1} bind:value={brushBlur.current} />
-		</label>
-		<label>
-			Mode
-			<select class="bg-gray-800" bind:value={brushMode.current}>
-				<option>{MODE_DRAW}</option>
-				<option>{MODE_ERASE}</option>
-			</select>
-		</label>
-		<button type="button" class={BUTTON_CLASS} onclick={undo}>Undo Stroke</button>
-		<button type="button" class={BUTTON_CLASS} onclick={redo}>Redo Stroke</button>
-		<button type="button" class={BUTTON_CLASS} onclick={clear}>Clear Canvas</button>
-
-		<hr class="my-2 border-gray-800" />
-		<h2 class="text-2xl">Stars</h2>
-		<label>
-			Number of Stars
-			<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars.current} />
-		</label>
-		<label>
-			Loosen Clusters
-			<input
-				class="bg-gray-800"
-				type="range"
-				min={0}
-				max={20}
-				step={1}
-				bind:value={clusterDiffusion.current}
-			/>
-		</label>
-		<button type="button" class={BUTTON_CLASS} onclick={generateStars}>Generate Stars</button>
-
-		<hr class="my-2 border-gray-800" />
-		<h2 class="text-2xl">Hyperlanes</h2>
-		<label>
-			Hyperlane Density
-			<input type="range" min={0} max={1} step={0.01} bind:value={connectedness.current} />
-		</label>
-		<label>
-			Max Hyperlane Distance
-			<input
-				type="range"
-				min={0}
-				max={MAX_CONNECTION_LENGTH}
-				step={1}
-				bind:value={maxConnectionLength.current}
-			/>
-		</label>
-		<label>
-			Allow Disconnected
-			<input type="checkbox" bind:checked={allowDisconnected.current} />
-		</label>
-		<button type="button" class={BUTTON_CLASS} onclick={generateConnections}>
-			Generate Hyperlanes
-		</button>
-
-		<hr class="my-2 border-gray-800" />
-		<h2 class="text-2xl">Mod</h2>
-		<a href={downloadUrl} download="painted_galaxy.txt" class={BUTTON_CLASS}>
-			Download Stellaris Map
-		</a>
+	<form class="controls">
+		<details name="step" bind:open={paintStepOpen}>
+			<summary>1. Paint</summary>
+			<fieldset>
+				<label>
+					Brush Size
+					<input
+						type="range"
+						min={1}
+						max={100}
+						step={1}
+						bind:value={brushSize.current}
+						data-value={brushSize.current}
+					/>
+				</label>
+				<label>
+					Opacity
+					<input
+						type="range"
+						min={0}
+						max={1}
+						step={0.01}
+						bind:value={brushOpacity.current}
+						data-value={brushOpacity.current}
+					/>
+				</label>
+				<label>
+					Blur
+					<input
+						type="range"
+						min={0}
+						max={2}
+						step={0.1}
+						bind:value={brushBlur.current}
+						data-value={brushBlur.current}
+					/>
+				</label>
+				<label>
+					Mode
+					<select class="bg-gray-800" bind:value={brushMode.current}>
+						<option>{MODE_DRAW}</option>
+						<option>{MODE_ERASE}</option>
+					</select>
+				</label>
+				<div role="group">
+					<button type="button" class="secondary" onclick={undo} disabled={strokes.length === 0}>
+						Undo
+					</button>
+					<button
+						type="button"
+						class="secondary"
+						onclick={redo}
+						disabled={undoneStrokes.length === 0}
+					>
+						Redo
+					</button>
+				</div>
+				<input type="button" class="secondary" onclick={clear} value="Clear Canvas" />
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={starsStepOpen}>
+			<summary>2. Stars</summary>
+			<fieldset>
+				<label>
+					Number of Stars
+					<input class="bg-gray-800" type="number" step={1} bind:value={numberOfStars.current} />
+				</label>
+				<label>
+					Loosen Clusters
+					<input
+						class="bg-gray-800"
+						type="range"
+						min={0}
+						max={20}
+						step={1}
+						bind:value={clusterDiffusion.current}
+						data-value={clusterDiffusion.current}
+					/>
+				</label>
+				<input type="button" onclick={generateStars} value="Generate Stars" />
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={hyperlanesStepOpen}>
+			<summary>3. Hyperlanes</summary>
+			<fieldset>
+				<label>
+					Density
+					<input
+						type="range"
+						min={0}
+						max={1}
+						step={0.01}
+						bind:value={connectedness.current}
+						data-value={connectedness.current}
+					/>
+				</label>
+				<label>
+					Max Distance
+					<input
+						type="range"
+						min={0}
+						max={MAX_CONNECTION_LENGTH}
+						step={1}
+						bind:value={maxConnectionLength.current}
+						data-value={maxConnectionLength.current}
+					/>
+				</label>
+				<fieldset>
+					<label>
+						Allow Disconnected
+						<input type="checkbox" bind:checked={allowDisconnected.current} />
+					</label>
+				</fieldset>
+				<input type="button" onclick={generateConnections} value="Generate Hyperlanes" />
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={modStepOpen}>
+			<summary>4. Mod</summary>
+			<div>
+				<a href={downloadUrl} hidden download="painted_galaxy.txt" bind:this={downloadLink}>
+					Download Stellaris Map
+				</a>
+				<input
+					type="button"
+					disabled={downloadDisabled}
+					onclick={() => {
+						if (!downloadDisabled) downloadLink?.click();
+					}}
+					value="Download Map"
+				/>
+				{#if downloadDisabled}
+					<input hidden aria-invalid="true" />
+					<small>You must generate stars and hyperlanes first</small>
+				{/if}
+				<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3532904115" target="_blank">
+					Subscribe and read instructions on the Workshop
+				</a>
+			</div>
+		</details>
 	</form>
 </div>
+
+<style>
+	.container {
+		display: flex;
+		flex-flow: row;
+	}
+	.canvas {
+		border: 1px solid white;
+		position: relative;
+
+		svg {
+			position: absolute;
+			top: 0;
+			left: 0;
+			pointer-events: none;
+		}
+	}
+	.controls {
+		padding: var(--pico-spacing);
+		width: 100%;
+	}
+</style>
