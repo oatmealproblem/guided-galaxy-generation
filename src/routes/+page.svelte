@@ -293,6 +293,22 @@
 		[],
 	);
 	let potentialHomeStars = new LocalStorageState<string[]>('potentialHomeStars', []);
+	let starDelaunay = $derived(step === Step.HYPERLANES ? new Delaunay(stars.current.flat()) : null);
+	let togglingHyperlaneFrom = $state<null | [number, number]>(null);
+
+	function toggleHyperlane(from: [number, number], to: [number, number]) {
+		const index = connections.current.findIndex(
+			(c) =>
+				(c[0][0] === from[0] && c[0][1] === from[1] && c[1][0] === to[0] && c[1][1] === to[1]) ||
+				(c[1][0] === from[0] && c[1][1] === from[1] && c[0][0] === to[0] && c[0][1] === to[1]),
+		);
+		if (index === -1) {
+			connections.current.push([from, to]);
+		} else {
+			connections.current.splice(index, 1);
+		}
+	}
+
 	function generateConnections() {
 		connections.current.length = 0;
 		potentialHomeStars.current.length = 0;
@@ -478,6 +494,17 @@
 			onclick={(e) => {
 				if (step === Step.STARS) {
 					toggleStar([e.offsetX, e.offsetY]);
+				} else if (step === Step.HYPERLANES) {
+					const starIndex = starDelaunay?.find(e.offsetX, e.offsetY);
+					if (starIndex == null) return;
+					if (togglingHyperlaneFrom) {
+						if (stars.current[starIndex] !== togglingHyperlaneFrom) {
+							toggleHyperlane(togglingHyperlaneFrom, stars.current[starIndex]);
+						}
+						togglingHyperlaneFrom = null;
+					} else {
+						togglingHyperlaneFrom = stars.current[starIndex];
+					}
 				}
 			}}
 			onpointerdown={(e) => {
@@ -490,7 +517,13 @@
 					if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
 				}
 			}}
-			style:cursor={step === Step.PAINT ? 'pointer' : step === Step.STARS ? 'crosshair' : ''}
+			style:cursor={step === Step.PAINT
+				? 'pointer'
+				: step === Step.STARS
+					? 'crosshair'
+					: step === Step.HYPERLANES
+						? 'pointer'
+						: ''}
 		>
 			<path
 				d={strokePath}
@@ -522,7 +555,11 @@
 					cx={x}
 					cy={y}
 					r="2.5"
-					fill={dev && potentialHomeStars.current.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
+					fill={x === togglingHyperlaneFrom?.[0] && y === togglingHyperlaneFrom?.[1]
+						? 'var(--pico-primary)'
+						: dev && potentialHomeStars.current.includes([x, y].toString())
+							? 'red'
+							: '#FFFFFF'}
 					stroke="var(--pico-background-color)"
 					stroke-width="1"
 					onclick={(e) => {
@@ -537,7 +574,10 @@
 	</div>
 	<form class="controls">
 		<details name="step" bind:open={paintStepOpen}>
-			<summary>1. Paint</summary>
+			<summary>
+				<small>1.</small>
+				Paint
+			</summary>
 			<fieldset>
 				<label>
 					Brush Size
@@ -597,7 +637,10 @@
 		</details>
 		<hr />
 		<details name="step" bind:open={starsStepOpen}>
-			<summary>2. Stars</summary>
+			<summary>
+				<small>2.</small>
+				Stars
+			</summary>
 			<fieldset>
 				<label>
 					Number of Stars
@@ -616,12 +659,26 @@
 					/>
 				</label>
 				<input type="button" onclick={generateStars} value="Generate Stars" />
-				<small>Click the map to add more!</small>
+				<small>Click the map to add and remove stars</small>
 			</fieldset>
 		</details>
 		<hr />
-		<details name="step" bind:open={hyperlanesStepOpen}>
-			<summary>3. Hyperlanes</summary>
+		<details
+			name="step"
+			bind:open={
+				() => hyperlanesStepOpen,
+				(value) => {
+					hyperlanesStepOpen = value;
+					if (!value) {
+						togglingHyperlaneFrom = null;
+					}
+				}
+			}
+		>
+			<summary>
+				<small>3.</small>
+				Hyperlanes
+			</summary>
 			<fieldset>
 				<label>
 					Density
@@ -652,11 +709,15 @@
 					</label>
 				</fieldset>
 				<input type="button" onclick={generateConnections} value="Generate Hyperlanes" />
+				<small>Click one star then another to customize hyperlanes</small>
 			</fieldset>
 		</details>
 		<hr />
 		<details name="step" bind:open={modStepOpen}>
-			<summary>4. Mod</summary>
+			<summary>
+				<small>4.</small>
+				Mod
+			</summary>
 			<div>
 				<a href={downloadUrl} hidden download="painted_galaxy.txt" bind:this={downloadLink}>
 					Download Stellaris Map
