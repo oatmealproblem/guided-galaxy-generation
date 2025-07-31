@@ -227,6 +227,23 @@
 	let numberOfStars = new LocalStorageState('numberOfStars', 600);
 	let clusterDiffusion = new LocalStorageState('clusterDiffusion', 10);
 	let stars = new LocalStorageState<[number, number][]>('stars', []);
+
+	function toggleStar(point: [number, number]) {
+		const index = stars.current.findIndex((s) => s[0] === point[0] && s[1] === point[1]);
+		if (index === -1) {
+			stars.current.push(point);
+		} else {
+			stars.current.splice(index, 1);
+			connections.current = connections.current.filter(
+				(c) =>
+					!(
+						(c[0][0] === point[0] && c[0][1] === point[1]) ||
+						(c[1][0] === point[0] && c[1][1] === point[1])
+					),
+			);
+		}
+	}
+
 	function generateStars() {
 		if (!ctx) return;
 		stars.current.length = 0;
@@ -243,7 +260,7 @@
 		while (added.size < numberOfStars.current) {
 			if (attempts >= numberOfStars.current * 1000) {
 				console.error(
-					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars}`,
+					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars.current}`,
 				);
 				break;
 			}
@@ -450,6 +467,19 @@
 			width={WIDTH}
 			height={HEIGHT}
 			bind:this={canvas}
+			style:opacity={step === Step.PAINT ? '100%' : '50%'}
+		></canvas>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<svg
+			viewBox="0 0 {WIDTH} {HEIGHT}"
+			width={WIDTH}
+			height={HEIGHT}
+			onclick={(e) => {
+				if (step === Step.STARS) {
+					toggleStar([e.offsetX, e.offsetY]);
+				}
+			}}
 			onpointerdown={(e) => {
 				if (step === Step.PAINT) {
 					strokePoints = [{ x: e.offsetX, y: e.offsetY }];
@@ -460,10 +490,8 @@
 					if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
 				}
 			}}
-			style:opacity={step === Step.PAINT ? '100%' : '50%'}
-			style:cursor={step === Step.PAINT ? 'pointer' : ''}
-		></canvas>
-		<svg viewBox="0 0 {WIDTH} {HEIGHT}" width={WIDTH} height={HEIGHT}>
+			style:cursor={step === Step.PAINT ? 'pointer' : step === Step.STARS ? 'crosshair' : ''}
+		>
 			<path
 				d={strokePath}
 				fill={brushMode.current === MODE_DRAW ? '#FFFFFF' : 'var(--pico-background-color)'}
@@ -493,10 +521,16 @@
 				<circle
 					cx={x}
 					cy={y}
-					r="2"
+					r="2.5"
 					fill={dev && potentialHomeStars.current.includes([x, y].toString()) ? 'red' : '#FFFFFF'}
-					stroke="#000000"
+					stroke="var(--pico-background-color)"
 					stroke-width="1"
+					onclick={(e) => {
+						if (step === Step.STARS) {
+							e.stopPropagation();
+							toggleStar([x, y]);
+						}
+					}}
 				/>
 			{/each}
 		</svg>
@@ -582,6 +616,7 @@
 					/>
 				</label>
 				<input type="button" onclick={generateStars} value="Generate Stars" />
+				<small>Click the map to add more!</small>
 			</fieldset>
 		</details>
 		<hr />
@@ -659,7 +694,6 @@
 			position: absolute;
 			top: 0;
 			left: 0;
-			pointer-events: none;
 		}
 	}
 	.controls {
