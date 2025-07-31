@@ -94,6 +94,7 @@
 		localStorage.setItem('paint-a-galaxy-canvas', dataUrl);
 	}
 
+	let initialBitmap: ImageBitmap | null = $state(null);
 	onMount(() => {
 		const base64ImageData = localStorage.getItem('paint-a-galaxy-canvas');
 		if (base64ImageData) {
@@ -101,6 +102,7 @@
 				.then((resp) => resp.blob())
 				.then((blob) => createImageBitmap(blob))
 				.then((bitmap) => {
+					initialBitmap = bitmap;
 					if (ctx) {
 						ctx.drawImage(bitmap, 0, 0);
 					}
@@ -148,6 +150,11 @@
 	function redraw() {
 		if (!ctx) return;
 		ctx.clearRect(0, 0, WIDTH, HEIGHT);
+		if (initialBitmap) {
+			ctx.filter = 'blur(0)';
+			ctx.globalAlpha = 1;
+			ctx.drawImage(initialBitmap, 0, 0);
+		}
 		for (const stroke of strokes) {
 			drawRecordedStroke(stroke);
 		}
