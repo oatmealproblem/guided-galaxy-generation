@@ -145,6 +145,7 @@ export function generateStellarisGalaxy(
 	stars: [number, number][],
 	connections: [[number, number], [number, number]][],
 	potentialHomeStars: string[],
+	preferredHomeStars: string[],
 ): string {
 	let sizeBasedSettings = TINY;
 	if (stars.length >= 400) sizeBasedSettings = SMALL;
@@ -173,11 +174,12 @@ export function generateStellarisGalaxy(
 	const systems = stars
 		.map((star, i) => {
 			const basics = `id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - WIDTH / 2)} y = ${star[1] - HEIGHT / 2} }`;
+			const baseWeight = preferredHomeStars.includes(star.toString()) ? 'base = 100' : 'base = 10';
 			// without any randomness, the player always spawns in the lowest ID spawn systems
 			// adding some weight depending on the modulo of ruler age introduces that randomness (ruler age is random within a reasonable range)
 			const randomModifier = `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`;
 			const empireSpawn = potentialHomeStars.includes(star.toString())
-				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 1 ${randomModifier} }`
+				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { ${baseWeight} ${randomModifier} }`
 				: '';
 			const thisStarFallenEmpireSpawns = fallenEmpireSpawns.filter((fe) => fe.star === star);
 			const feSpawnEffect =
@@ -199,8 +201,8 @@ export function generateStellarisGalaxy(
 }
 
 export function calcNumStartingStars(stars: [number, number][]) {
-	// 6 per 200 is the vanilla num_empires max, but some origins spawn additional empires, so let's double this to be safe
-	return Math.ceil((stars.length / 200) * 6) * 2;
+	// 6 per 200 is the vanilla num_empires max, but somethings cause additional empires to spawn (players, some origins), so lets increase by 50%
+	return Math.round((stars.length / 200) * 6 * 1.5);
 }
 
 function getFallenEmpireOrigin(

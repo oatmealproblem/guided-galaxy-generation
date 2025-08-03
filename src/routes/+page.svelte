@@ -2,12 +2,11 @@
 	import { getStroke } from 'perfect-freehand';
 	import { Delaunay } from 'd3-delaunay';
 	import { forceManyBody, forceSimulation } from 'd3-force';
-	import createGraph, { type Link } from 'ngraph.graph';
+	import createGraph, { type Graph, type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
 	import { onMount } from 'svelte';
 
-	import { dev } from '$app/environment';
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
 	import { HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
@@ -19,17 +18,20 @@
 		PAINT: 'PAINT',
 		STARS: 'STARS',
 		HYPERLANES: 'HYPERLANES',
+		SPAWNS: 'SPAWNS',
 		MOD: 'MOD',
 	} as const;
 	type Step = (typeof Step)[keyof typeof Step];
 	let paintStepOpen = $state(true);
 	let starsStepOpen = $state(false);
 	let hyperlanesStepOpen = $state(false);
+	let spawnsStepOpen = $state(false);
 	let modStepOpen = $state(false);
 	let step = $derived.by(() => {
 		if (paintStepOpen) return Step.PAINT;
 		if (starsStepOpen) return Step.STARS;
 		if (hyperlanesStepOpen) return Step.HYPERLANES;
+		if (spawnsStepOpen) return Step.SPAWNS;
 		if (modStepOpen) return Step.MOD;
 		return null;
 	});
@@ -293,8 +295,29 @@
 		[],
 	);
 	let potentialHomeStars = new LocalStorageState<string[]>('potentialHomeStars', []);
-	let starDelaunay = $derived(step === Step.HYPERLANES ? new Delaunay(stars.current.flat()) : null);
+	let preferredHomeStars = new LocalStorageState<string[]>('preferredHomeStars', []);
+	let starDelaunay = $derived(
+		step === Step.HYPERLANES || step === Step.SPAWNS ? new Delaunay(stars.current.flat()) : null,
+	);
 	let togglingHyperlaneFrom = $state<null | [number, number]>(null);
+
+	function toggleHomeStar(star: [number, number], { preferred }: { preferred: boolean }) {
+		const index = potentialHomeStars.current.findIndex((s) => s === star.toString());
+		const preferredIndex = preferredHomeStars.current.findIndex((s) => s === star.toString());
+		if (index === -1 && preferredIndex === -1) {
+			potentialHomeStars.current.push(star.toString());
+			if (preferred) preferredHomeStars.current.push(star.toString());
+		} else if (index >= 0 && preferredIndex >= 0) {
+			potentialHomeStars.current.splice(index, 1);
+			preferredHomeStars.current.splice(preferredIndex, 1);
+		} else if (index >= 0 && preferredIndex === -1) {
+			if (preferred) {
+				preferredHomeStars.current.push(star.toString());
+			} else {
+				potentialHomeStars.current.splice(index, 1);
+			}
+		}
+	}
 
 	function toggleHyperlane(from: [number, number], to: [number, number]) {
 		const index = connections.current.findIndex(
@@ -312,6 +335,7 @@
 	function generateConnections() {
 		connections.current.length = 0;
 		potentialHomeStars.current.length = 0;
+		preferredHomeStars.current.length = 0;
 		if (stars.current.length < 3) return;
 		const g = createGraph<
 			{ coords: [number, number]; d: number },
@@ -368,17 +392,37 @@
 			}
 		}
 
+		randomizeHomeSystems(g);
+
+		// add connections to state
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not using for state
+		const added = new Set<string>();
+		g.forEachLink((link) => {
+			const key = [link.toId, link.fromId].sort().toString();
+			if (added.has(key)) return;
+			added.add(key);
+			connections.current.push([
+				g.getNode(link.fromId)!.data.coords,
+				g.getNode(link.toId)!.data.coords,
+			]);
+		});
+	}
+
+	function randomizeHomeSystems(
+		graph: Graph<{ coords: [number, number]; d: number }, { distance: number; isMst?: boolean }>,
+	) {
 		// find home stars
 		const numPotentialHomeStars = calcNumStartingStars(stars.current);
 		const newPotentialHomeStars: [number, number][] = [];
-		for (let i = 0; i < numPotentialHomeStars; i++) {
-			newPotentialHomeStars.push(stars.current[i]);
+		const startIndex = Math.floor(Math.random() * (stars.current.length - numPotentialHomeStars));
+		for (let i = startIndex; i < startIndex + numPotentialHomeStars; i++) {
+			if (stars.current[i]) newPotentialHomeStars.push(stars.current[i]);
 		}
 		// move each to the star furthest from all other stars
 		// a single iteration of this seems to be good enough
 		newPotentialHomeStars.forEach((star, index) => {
 			// reset distance to inf
-			g.forEachNode((node) => {
+			graph.forEachNode((node) => {
 				node.data.d = Infinity;
 			});
 			const edge: [number, number][] = [];
@@ -386,7 +430,7 @@
 			newPotentialHomeStars
 				.filter((other) => other !== star)
 				.forEach((other) => {
-					const node = g.getNode(other.toString());
+					const node = graph.getNode(other.toString());
 					node!.data.d = 0;
 					edge.push(other);
 				});
@@ -396,13 +440,13 @@
 			// (simplified since all edge weights are 1)
 			while (edge.length) {
 				const s = edge.pop()!;
-				g.forEachLinkedNode(
+				graph.forEachLinkedNode(
 					s.toString(),
 					(node) => {
 						// avoid dead ends; they can be unfair/unfun home systems
 						const isDeadEnd = node.links == null || node.links.size <= 1;
 						if (node.data.d === Infinity && !isDeadEnd) {
-							node.data.d = g.getNode(s.toString())!.data.d + 1;
+							node.data.d = graph.getNode(s.toString())!.data.d + 1;
 							if (node.data.d > maxDistance) {
 								maxDistance = node.data.d;
 								maxDistanceStars = [node.data.coords];
@@ -422,25 +466,36 @@
 			}
 		});
 		potentialHomeStars.current = newPotentialHomeStars.map((s) => s.toString());
+		preferredHomeStars.current = [];
+	}
 
-		// add connections to state
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not using for state
-		const added = new Set<string>();
-		g.forEachLink((link) => {
-			const key = [link.toId, link.fromId].sort().toString();
-			if (added.has(key)) return;
-			added.add(key);
-			connections.current.push([
-				g.getNode(link.fromId)!.data.coords,
-				g.getNode(link.toId)!.data.coords,
-			]);
-		});
+	function makeGraphFromConnections() {
+		const g = createGraph<
+			{ coords: [number, number]; d: number },
+			{ distance: number; isMst?: boolean }
+		>();
+		for (const star of stars.current) {
+			g.addNode(`${star[0]},${star[1]}`, { coords: star, d: Infinity });
+		}
+		for (const [from, to] of connections.current) {
+			g.addLink(`${from[0]},${from[1]}`, `${to[0]},${to[1]}`, {
+				distance: Math.hypot(from[0] - to[0], from[1] - to[1]),
+			});
+		}
+		return g;
 	}
 
 	let downloadUrl = $derived(
 		URL.createObjectURL(
 			new Blob(
-				[generateStellarisGalaxy(stars.current, connections.current, potentialHomeStars.current)],
+				[
+					generateStellarisGalaxy(
+						stars.current,
+						connections.current,
+						potentialHomeStars.current,
+						preferredHomeStars.current,
+					),
+				],
 				{
 					type: 'text/plain',
 				},
@@ -505,6 +560,10 @@
 					} else {
 						togglingHyperlaneFrom = stars.current[starIndex];
 					}
+				} else if (step === Step.SPAWNS) {
+					const starIndex = starDelaunay?.find(e.offsetX, e.offsetY);
+					if (starIndex == null) return;
+					toggleHomeStar(stars.current[starIndex], { preferred: e.shiftKey });
 				}
 			}}
 			onpointerdown={(e) => {
@@ -521,7 +580,7 @@
 				? 'pointer'
 				: step === Step.STARS
 					? 'crosshair'
-					: step === Step.HYPERLANES
+					: step === Step.HYPERLANES || step === Step.SPAWNS
 						? 'pointer'
 						: ''}
 		>
@@ -551,14 +610,21 @@
 				/>
 			{/each}
 			{#each stars.current as [x, y] (`${[x, y]}`)}
+				{#if step === Step.SPAWNS && preferredHomeStars.current.includes([x, y].toString())}
+					<circle cx={x} cy={y} r="5" fill="none" stroke="var(--pico-primary)" stroke-width="2" />
+				{/if}
 				<circle
 					cx={x}
 					cy={y}
-					r="2.5"
+					r={x === togglingHyperlaneFrom?.[0] && y === togglingHyperlaneFrom?.[1]
+						? '3.5'
+						: step === Step.SPAWNS && potentialHomeStars.current.includes([x, y].toString())
+							? '3.5'
+							: '2.5'}
 					fill={x === togglingHyperlaneFrom?.[0] && y === togglingHyperlaneFrom?.[1]
 						? 'var(--pico-primary)'
-						: dev && potentialHomeStars.current.includes([x, y].toString())
-							? 'red'
+						: step === Step.SPAWNS && potentialHomeStars.current.includes([x, y].toString())
+							? 'var(--pico-primary)'
 							: '#FFFFFF'}
 					stroke="var(--pico-background-color)"
 					stroke-width="1"
@@ -713,9 +779,33 @@
 			</fieldset>
 		</details>
 		<hr />
-		<details name="step" bind:open={modStepOpen}>
+		<details name="step" bind:open={spawnsStepOpen}>
 			<summary>
 				<small>4.</small>
+				Spawns
+				<small>(optional)</small>
+			</summary>
+			<fieldset>
+				<input
+					type="button"
+					value="Randomize"
+					onclick={() => randomizeHomeSystems(makeGraphFromConnections())}
+				/>
+				<small>
+					Click the map to customize spawn systems. Shift+click to make it a <span
+						data-tooltip="These are used first, before normal spawns"
+					>
+						preferred spawn.
+					</span>
+					In a single-player game with only one preferred spawn, the player will always spawn there.
+				</small>
+				<small></small>
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={modStepOpen}>
+			<summary>
+				<small>5.</small>
 				Mod
 			</summary>
 			<div>
