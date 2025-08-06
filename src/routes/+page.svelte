@@ -304,6 +304,7 @@
 	function toggleHomeStar(star: [number, number], { preferred }: { preferred: boolean }) {
 		const index = potentialHomeStars.current.findIndex((s) => s === star.toString());
 		const preferredIndex = preferredHomeStars.current.findIndex((s) => s === star.toString());
+		console.log('toggleHomeStar debug', { star, starString: star.toString, index, preferredIndex });
 		if (index === -1 && preferredIndex === -1) {
 			potentialHomeStars.current.push(star.toString());
 			if (preferred) preferredHomeStars.current.push(star.toString());
