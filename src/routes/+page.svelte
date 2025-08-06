@@ -562,6 +562,11 @@
 					}
 				} else if (step === Step.SPAWNS) {
 					const starIndex = starDelaunay?.find(e.offsetX, e.offsetY);
+					console.log('spawn editing debug', {
+						offsetX: e.offsetX,
+						offsetY: e.offsetY,
+						starIndex,
+					});
 					if (starIndex == null) return;
 					toggleHomeStar(stars.current[starIndex], { preferred: e.shiftKey });
 				}
