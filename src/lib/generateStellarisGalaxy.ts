@@ -174,12 +174,14 @@ export function generateStellarisGalaxy(
 	const systems = stars
 		.map((star, i) => {
 			const basics = `id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - WIDTH / 2)} y = ${star[1] - HEIGHT / 2} }`;
-			const baseWeight = preferredHomeStars.includes(star.toString()) ? 'base = 100' : 'base = 10';
+			const preferredModifier = preferredHomeStars.includes(star.toString())
+				? 'modifier = { add = 100 always = yes }' // simply increasing the base weight doesn't work for some reason, need to use a modifier
+				: '';
 			// without any randomness, the player always spawns in the lowest ID spawn systems
 			// adding some weight depending on the modulo of ruler age introduces that randomness (ruler age is random within a reasonable range)
 			const randomModifier = `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`;
 			const empireSpawn = potentialHomeStars.includes(star.toString())
-				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { ${baseWeight} ${randomModifier} }`
+				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`
 				: '';
 			const thisStarFallenEmpireSpawns = fallenEmpireSpawns.filter((fe) => fe.star === star);
 			const feSpawnEffect =
