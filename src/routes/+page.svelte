@@ -304,7 +304,6 @@
 	function toggleHomeStar(star: [number, number], { preferred }: { preferred: boolean }) {
 		const index = potentialHomeStars.current.findIndex((s) => s === star.toString());
 		const preferredIndex = preferredHomeStars.current.findIndex((s) => s === star.toString());
-		console.log('toggleHomeStar debug', { star, starString: star.toString, index, preferredIndex });
 		if (index === -1 && preferredIndex === -1) {
 			potentialHomeStars.current.push(star.toString());
 			if (preferred) preferredHomeStars.current.push(star.toString());
@@ -505,6 +504,17 @@
 	);
 	let downloadDisabled = $derived(stars.current.length === 0 || connections.current.length === 0);
 	let downloadLink = $state<HTMLAnchorElement>();
+
+	function throttle<Args extends unknown[]>(fn: (...args: Args) => void, ms: number) {
+		let last = 0;
+		return function (...args: Args) {
+			var now = Date.now();
+			if (now - last >= ms) {
+				fn(...args);
+				last = now;
+			}
+		};
+	}
 </script>
 
 <svelte:document
@@ -547,7 +557,7 @@
 			viewBox="0 0 {WIDTH} {HEIGHT}"
 			width={WIDTH}
 			height={HEIGHT}
-			onclick={(e) => {
+			onclick={throttle((e) => {
 				if (step === Step.STARS) {
 					toggleStar([e.offsetX, e.offsetY]);
 				} else if (step === Step.HYPERLANES) {
@@ -571,7 +581,7 @@
 					if (starIndex == null) return;
 					toggleHomeStar(stars.current[starIndex], { preferred: e.shiftKey });
 				}
-			}}
+			}, 250)}
 			onpointerdown={(e) => {
 				if (step === Step.PAINT) {
 					strokePoints = [{ x: e.offsetX, y: e.offsetY }];
