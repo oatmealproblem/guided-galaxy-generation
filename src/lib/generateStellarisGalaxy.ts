@@ -179,7 +179,11 @@ export function generateStellarisGalaxy(
 				: '';
 			// without any randomness, the player always spawns in the lowest ID spawn systems
 			// adding some weight depending on the modulo of ruler age introduces that randomness (ruler age is random within a reasonable range)
-			const randomModifier = `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`;
+			const randomModifier =
+				// don't add randomModifier for preferred spawns; math seems to break if you add multiple modifiers to spawn weight
+				preferredModifier === ''
+					? `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`
+					: '';
 			const empireSpawn = potentialHomeStars.includes(star.toString())
 				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`
 				: '';
