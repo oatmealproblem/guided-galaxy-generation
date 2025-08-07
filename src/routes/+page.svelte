@@ -9,7 +9,7 @@
 
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
-	import { HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
+	import { CENTER_MARK_SIZE, HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
 
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
@@ -600,6 +600,16 @@
 				d={strokePath}
 				fill={brushMode.current === MODE_DRAW ? '#FFFFFF' : 'var(--pico-background-color)'}
 				opacity={brushOpacity.current}
+			/>
+			<path
+				d="M {WIDTH / 2} {HEIGHT / 2 - CENTER_MARK_SIZE}
+				   L {WIDTH / 2} {HEIGHT / 2 + CENTER_MARK_SIZE}
+				   M {WIDTH / 2 - CENTER_MARK_SIZE} {HEIGHT / 2}
+				   L {WIDTH / 2 + CENTER_MARK_SIZE} {HEIGHT / 2}"
+				fill="none"
+				stroke="#FFF"
+				stroke-width="1"
+				stroke-opacity="0.9"
 			/>
 			{#each connections.current as [from, to] (`${[from, to]}`)}
 				<line
