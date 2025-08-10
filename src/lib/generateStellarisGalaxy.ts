@@ -1,4 +1,5 @@
 import { FALLEN_EMPIRE_SPAWN_RADIUS, HEIGHT, WIDTH } from './constants';
+import { arePointsEqual } from './utils';
 
 const COMMON = `
 	name = "Painted Galaxy"
@@ -144,6 +145,7 @@ const HUGE = `
 export function generateStellarisGalaxy(
 	stars: [number, number][],
 	connections: [[number, number], [number, number]][],
+	wormholes: [[number, number], [number, number]][],
 	potentialHomeStars: string[],
 	preferredHomeStars: string[],
 ): string {
@@ -187,12 +189,22 @@ export function generateStellarisGalaxy(
 			const empireSpawn = potentialHomeStars.includes(star.toString())
 				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`
 				: '';
+
 			const thisStarFallenEmpireSpawns = fallenEmpireSpawns.filter((fe) => fe.star === star);
 			const feSpawnEffect =
 				thisStarFallenEmpireSpawns.length > 0
-					? `effect = { set_star_flag = painted_galaxy_fe_spawn ${thisStarFallenEmpireSpawns.map((fe) => `set_star_flag = painted_galaxy_fe_spawn_${fe.direction}`).join(' ')} }`
+					? `set_star_flag = painted_galaxy_fe_spawn ${thisStarFallenEmpireSpawns.map((fe) => `set_star_flag = painted_galaxy_fe_spawn_${fe.direction}`).join(' ')}`
 					: '';
-			return `\tsystem = { ${basics} ${empireSpawn} ${feSpawnEffect} }`;
+
+			const wormholeIndex = wormholes.findIndex(
+				(wh) => arePointsEqual(star, wh[0]) || arePointsEqual(star, wh[1]),
+			);
+			const wormholeEffect =
+				wormholeIndex >= 0 ? `set_star_flag = painted_galaxy_wormhole_${wormholeIndex}` : '';
+
+			const effects = [feSpawnEffect, wormholeEffect];
+			const effect = effects.some(Boolean) ? `effect = { ${effects.join(' ')} }` : '';
+			return `\tsystem = { ${basics} ${empireSpawn} ${effect} }`;
 		})
 		.join('\n');
 	const hyperlanes = connections

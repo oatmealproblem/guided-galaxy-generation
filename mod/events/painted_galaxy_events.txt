@@ -1,20 +1,129 @@
 namespace = painted_galaxy
 
 # correct homeworld planet class
+# from = founder primary species
 planet_event = {
-    id = painted_galaxy.1
-    is_triggered_only = yes
-    hide_window = yes
-    immediate = {
-        if = {
-            limit = {
-                is_artificial = no
-                is_ideal_planet_class = { who = from status = no }
-                NAND = { is_planet_class = pc_relic FROM = { has_origin = origin_shoulders_of_giants } }
-                NAND = { is_planet_class = pc_nuked FROM = { OR = { has_origin = origin_post_apocalyptic has_origin = origin_post_apocalyptic_machines } } }
-            }
-            change_pc = from
-            reset_planet = yes
-        }
-    }
+	id = painted_galaxy.1
+	is_triggered_only = yes
+	hide_window = yes
+	immediate = {
+		if = {
+			limit = {
+				is_artificial = no
+				is_ideal_planet_class = { who = from status = no }
+				NAND = { is_planet_class = pc_relic owner = { has_origin = origin_shoulders_of_giants } }
+				NAND = { is_planet_class = pc_nuked owner = { OR = { has_origin = origin_post_apocalyptic has_origin = origin_post_apocalyptic_machines } } }
+			}
+			change_pc = from
+			reset_planet = yes
+		}
+	}
+}
+
+event = {
+	id = painted_galaxy.2
+	is_triggered_only = yes
+	hide_window = yes
+	immediate = {
+		painted_galaxy_create_wormhole_pair = { NUMBER = 0 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 1 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 2 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 3 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 4 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 5 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 6 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 7 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 8 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 9 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 10 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 11 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 12 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 13 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 14 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 15 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 16 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 17 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 18 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 19 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 20 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 21 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 22 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 23 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 24 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 25 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 26 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 27 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 28 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 29 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 30 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 31 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 32 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 33 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 34 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 35 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 36 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 37 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 38 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 39 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 40 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 41 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 42 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 43 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 44 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 45 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 46 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 47 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 48 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 49 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 50 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 51 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 52 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 53 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 54 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 55 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 56 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 57 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 58 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 59 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 60 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 61 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 62 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 63 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 64 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 65 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 66 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 67 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 68 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 69 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 70 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 71 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 72 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 73 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 74 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 75 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 76 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 77 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 78 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 79 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 80 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 81 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 82 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 83 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 84 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 85 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 86 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 87 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 88 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 89 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 90 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 91 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 92 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 93 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 94 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 95 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 96 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 97 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 98 }
+		painted_galaxy_create_wormhole_pair = { NUMBER = 99 }
+	}
 }

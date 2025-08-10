@@ -10,6 +10,7 @@
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
 	import { CENTER_MARK_SIZE, HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
+	import { arePointsEqual } from '$lib/utils';
 
 	let canvas = $state<HTMLCanvasElement>();
 	let ctx = $derived(canvas?.getContext('2d'));
@@ -18,6 +19,7 @@
 		PAINT: 'PAINT',
 		STARS: 'STARS',
 		HYPERLANES: 'HYPERLANES',
+		WORMHOLES: 'WORMHOLES',
 		SPAWNS: 'SPAWNS',
 		MOD: 'MOD',
 	} as const;
@@ -25,12 +27,14 @@
 	let paintStepOpen = $state(true);
 	let starsStepOpen = $state(false);
 	let hyperlanesStepOpen = $state(false);
+	let wormholesStepOpen = $state(false);
 	let spawnsStepOpen = $state(false);
 	let modStepOpen = $state(false);
 	let step = $derived.by(() => {
 		if (paintStepOpen) return Step.PAINT;
 		if (starsStepOpen) return Step.STARS;
 		if (hyperlanesStepOpen) return Step.HYPERLANES;
+		if (wormholesStepOpen) return Step.WORMHOLES;
 		if (spawnsStepOpen) return Step.SPAWNS;
 		if (modStepOpen) return Step.MOD;
 		return null;
@@ -231,17 +235,16 @@
 	let stars = new LocalStorageState<[number, number][]>('stars', []);
 
 	function toggleStar(point: [number, number]) {
-		const index = stars.current.findIndex((s) => s[0] === point[0] && s[1] === point[1]);
+		const index = stars.current.findIndex((star) => arePointsEqual(star, point));
 		if (index === -1) {
 			stars.current.push(point);
 		} else {
 			stars.current.splice(index, 1);
 			connections.current = connections.current.filter(
-				(c) =>
-					!(
-						(c[0][0] === point[0] && c[0][1] === point[1]) ||
-						(c[1][0] === point[0] && c[1][1] === point[1])
-					),
+				(c) => !(arePointsEqual(c[0], point) || arePointsEqual(c[1], point)),
+			);
+			wormholes.current = wormholes.current.filter(
+				(c) => !(arePointsEqual(c[0], point) || arePointsEqual(c[1], point)),
 			);
 		}
 	}
@@ -250,6 +253,7 @@
 		if (!ctx) return;
 		stars.current.length = 0;
 		connections.current.length = 0;
+		wormholes.current.length = 0;
 		potentialHomeStars.current.length = 0;
 		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 		function getAlpha(x: number, y: number) {
@@ -297,7 +301,9 @@
 	let potentialHomeStars = new LocalStorageState<string[]>('potentialHomeStars', []);
 	let preferredHomeStars = new LocalStorageState<string[]>('preferredHomeStars', []);
 	let starDelaunay = $derived(
-		step === Step.HYPERLANES || step === Step.SPAWNS ? new Delaunay(stars.current.flat()) : null,
+		step === Step.HYPERLANES || step === Step.WORMHOLES || step === Step.SPAWNS
+			? new Delaunay(stars.current.flat())
+			: null,
 	);
 	let togglingHyperlaneFrom = $state<null | [number, number]>(null);
 
@@ -322,8 +328,8 @@
 	function toggleHyperlane(from: [number, number], to: [number, number]) {
 		const index = connections.current.findIndex(
 			(c) =>
-				(c[0][0] === from[0] && c[0][1] === from[1] && c[1][0] === to[0] && c[1][1] === to[1]) ||
-				(c[1][0] === from[0] && c[1][1] === from[1] && c[0][0] === to[0] && c[0][1] === to[1]),
+				(arePointsEqual(c[0], from) && arePointsEqual(c[1], to)) ||
+				(arePointsEqual(c[1], from) && arePointsEqual(c[0], to)),
 		);
 		if (index === -1) {
 			connections.current.push([from, to]);
@@ -485,6 +491,32 @@
 		return g;
 	}
 
+	let wormholes = new LocalStorageState<[[number, number], [number, number]][]>('wormholes', []);
+	let togglingWormholeFrom = $state<null | [number, number]>(null);
+
+	function toggleWormhole(from: [number, number], to: [number, number]) {
+		const index = wormholes.current.findIndex(
+			(c) =>
+				(arePointsEqual(c[0], from) && arePointsEqual(c[1], to)) ||
+				(arePointsEqual(c[1], from) && arePointsEqual(c[0], to)),
+		);
+		if (index === -1) {
+			// each system can only have 1 wormhole, so remove any wormholes that share an origin or destination
+			wormholes.current = wormholes.current.filter(
+				(c) =>
+					!(
+						arePointsEqual(c[0], from) ||
+						arePointsEqual(c[0], to) ||
+						arePointsEqual(c[1], from) ||
+						arePointsEqual(c[1], to)
+					),
+			);
+			wormholes.current.push([from, to]);
+		} else {
+			wormholes.current.splice(index, 1);
+		}
+	}
+
 	let downloadUrl = $derived(
 		URL.createObjectURL(
 			new Blob(
@@ -492,6 +524,7 @@
 					generateStellarisGalaxy(
 						stars.current,
 						connections.current,
+						wormholes.current,
 						potentialHomeStars.current,
 						preferredHomeStars.current,
 					),
@@ -571,6 +604,18 @@
 					} else {
 						togglingHyperlaneFrom = stars.current[starIndex];
 					}
+				} else if (step === Step.WORMHOLES) {
+					console.log('wormhole step click');
+					const starIndex = starDelaunay?.find(e.offsetX, e.offsetY);
+					if (starIndex == null) return;
+					if (togglingWormholeFrom) {
+						if (stars.current[starIndex] !== togglingWormholeFrom) {
+							toggleWormhole(togglingWormholeFrom, stars.current[starIndex]);
+						}
+						togglingWormholeFrom = null;
+					} else {
+						togglingWormholeFrom = stars.current[starIndex];
+					}
 				} else if (step === Step.SPAWNS) {
 					const starIndex = starDelaunay?.find(e.offsetX, e.offsetY);
 					if (starIndex == null) return;
@@ -592,7 +637,7 @@
 				? 'pointer'
 				: step === Step.STARS
 					? 'crosshair'
-					: step === Step.HYPERLANES || step === Step.SPAWNS
+					: step === Step.HYPERLANES || step === Step.WORMHOLES || step === Step.SPAWNS
 						? 'pointer'
 						: ''}
 		>
@@ -631,6 +676,18 @@
 					stroke-width="1"
 				/>
 			{/each}
+			{#each wormholes.current as [from, to] (`${[from, to]}`)}
+				<line
+					x1={from[0]}
+					y1={from[1]}
+					x2={to[0]}
+					y2={to[1]}
+					stroke="#FF00FF"
+					stroke-opacity="1"
+					stroke-width="1"
+					stroke-dasharray="3"
+				/>
+			{/each}
 			{#each stars.current as [x, y] (`${[x, y]}`)}
 				{#if step === Step.SPAWNS && preferredHomeStars.current.includes([x, y].toString())}
 					<circle cx={x} cy={y} r="5" fill="none" stroke="var(--pico-primary)" stroke-width="2" />
@@ -638,12 +695,14 @@
 				<circle
 					cx={x}
 					cy={y}
-					r={x === togglingHyperlaneFrom?.[0] && y === togglingHyperlaneFrom?.[1]
+					r={(togglingHyperlaneFrom && arePointsEqual([x, y], togglingHyperlaneFrom)) ||
+					(togglingWormholeFrom && arePointsEqual([x, y], togglingWormholeFrom))
 						? '3.5'
 						: step === Step.SPAWNS && potentialHomeStars.current.includes([x, y].toString())
 							? '3.5'
 							: '2.5'}
-					fill={x === togglingHyperlaneFrom?.[0] && y === togglingHyperlaneFrom?.[1]
+					fill={(togglingHyperlaneFrom && arePointsEqual([x, y], togglingHyperlaneFrom)) ||
+					(togglingWormholeFrom && arePointsEqual([x, y], togglingWormholeFrom))
 						? 'var(--pico-primary)'
 						: step === Step.SPAWNS && potentialHomeStars.current.includes([x, y].toString())
 							? 'var(--pico-primary)'
@@ -801,9 +860,34 @@
 			</fieldset>
 		</details>
 		<hr />
-		<details name="step" bind:open={spawnsStepOpen}>
+		<details
+			name="step"
+			bind:open={
+				() => wormholesStepOpen,
+				(value) => {
+					wormholesStepOpen = value;
+					if (!value) {
+						togglingWormholeFrom = null;
+					}
+				}
+			}
+		>
 			<summary>
 				<small>4.</small>
+				Wormholes
+				<small>(Optional)</small>
+			</summary>
+			<fieldset>
+				<small>
+					Click one star then another to customize wormholes. Random wormholes will still spawn
+					according to your galaxy settings.
+				</small>
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={spawnsStepOpen}>
+			<summary>
+				<small>5.</small>
 				Spawns
 				<small>(optional)</small>
 			</summary>
@@ -827,7 +911,7 @@
 		<hr />
 		<details name="step" bind:open={modStepOpen}>
 			<summary>
-				<small>5.</small>
+				<small>6.</small>
 				Mod
 			</summary>
 			<div>
