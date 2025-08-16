@@ -130,6 +130,8 @@
 					initialBitmap = bitmap;
 					if (ctx) {
 						ctx.drawImage(bitmap, 0, 0);
+						// ctx.filter = 'grayscale(1)';
+						// ctx.drawImage(img!, 0, 0, 900, 900);
 					}
 				});
 		}
@@ -146,17 +148,22 @@
 		if (config.mode === MODE_ERASE) {
 			ctx.save();
 			ctx.clip(p);
-			const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
-			for (let i = 0; i < imageData.data.length; i += 4) {
-				// convert grayscale to transparency
-				imageData.data[i + 3] = Math.round((imageData.data[i] / 255) * imageData.data[i + 3]);
-				imageData.data[i] = 255;
-				imageData.data[i + 1] = 255;
-				imageData.data[i + 2] = 255;
-			}
-			ctx.putImageData(imageData, 0, 0);
+			convertGrayscaleToOpacity();
 			ctx.restore();
 		}
+	}
+
+	function convertGrayscaleToOpacity() {
+		if (!ctx) return;
+		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+		for (let i = 0; i < imageData.data.length; i += 4) {
+			// convert grayscale to transparency
+			imageData.data[i + 3] = Math.round((imageData.data[i] / 255) * imageData.data[i + 3]);
+			imageData.data[i] = 255;
+			imageData.data[i + 1] = 255;
+			imageData.data[i + 2] = 255;
+		}
+		ctx.putImageData(imageData, 0, 0);
 	}
 
 	function drawRecordedStroke(stroke: RecordedStroke) {
@@ -780,6 +787,33 @@
 					</button>
 				</div>
 				<input type="button" class="secondary" onclick={clear} value="Clear Canvas" />
+				<hr />
+				<label>
+					...or upload an image
+					<input
+						type="file"
+						accept=".png,.jpg,.jpeg,.webp"
+						oninput={async (e) => {
+							const input = e.currentTarget;
+							const file = input.files?.item(0);
+							if (ctx && file) {
+								ctx.filter = 'grayscale(1)';
+								ctx.drawImage(await createImageBitmap(file), 0, 0, 900, 900);
+								convertGrayscaleToOpacity();
+								saveCanvas();
+								canvas?.toBlob(async (blob) => {
+									if (blob) {
+										initialBitmap = await createImageBitmap(blob);
+										strokes = [];
+										undoneStrokes = [];
+										imageDataStack = [];
+										imageDataUndoStack = [];
+									}
+								});
+							}
+						}}
+					/>
+				</label>
 			</fieldset>
 		</details>
 		<hr />
@@ -946,6 +980,7 @@
 	.canvas {
 		border: 1px solid white;
 		position: relative;
+		align-self: start;
 
 		svg {
 			position: absolute;
