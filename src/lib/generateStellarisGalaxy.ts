@@ -1,8 +1,7 @@
-import { FALLEN_EMPIRE_SPAWN_RADIUS, HEIGHT, WIDTH } from './constants';
+import { FALLEN_EMPIRE_SPAWN_RADIUS, HEIGHT, SPAWNS_PER_MAX_AI_EMPIRE, WIDTH } from './constants';
 import { arePointsEqual } from './utils';
 
 const COMMON = `
-	name = "Painted Galaxy"
 	priority = 10
 	supports_shape = elliptical
 	supports_shape = ring
@@ -15,140 +14,80 @@ const COMMON = `
 	supports_shape = cartwheel
 	supports_shape = spoked
 	random_hyperlanes = no
+
+	num_wormhole_pairs = { min = 0 max = 5 }
+	num_wormhole_pairs_default = 1
+	num_gateways = { min = 0 max = 5 }
+	num_gateways_default = 1
+	num_hyperlanes = { min=0.5 max= 3 }
+	num_hyperlanes_default = 1
+	colonizable_planet_odds = 1.0
+	primitive_odds = 1.0
 `;
 
 const TINY = `
-	num_empires = { min = 0 max = 6 }	#limits player customization
-	num_empire_default = 3
 	fallen_empire_default = 0
 	fallen_empire_max = 1
 	marauder_empire_default = 1
 	marauder_empire_max = 1
 	advanced_empire_default = 0
-	colonizable_planet_odds = 1.0
-	primitive_odds = 1.0
 	crisis_strength = 0.5
 	extra_crisis_strength = { 10 25 }
-
-	# num_nebulas	= 2
-	# nebula_size = 60
-	# nebula_min_dist = 100
-
-	num_wormhole_pairs = { min = 0 max = 5 }
-	num_wormhole_pairs_default = 1
-	num_gateways = { min = 0 max = 5 }
-	num_gateways_default = 1
-	num_hyperlanes = { min=0.5 max= 3 }
-	num_hyperlanes_default = 1
 `;
 
 const SMALL = `
-	num_empires = { min = 0 max = 12 }	#limits player customization
-	num_empire_default = 6
 	fallen_empire_default = 1
 	fallen_empire_max = 2
 	marauder_empire_default = 1
 	marauder_empire_max = 2
 	advanced_empire_default = 1
-	colonizable_planet_odds = 1.0
-	primitive_odds = 1.0
 	crisis_strength = 0.75
 	extra_crisis_strength = { 10 25 }
-
-	# num_nebulas	= 3
-	# nebula_size = 60
-	# nebula_min_dist = 100
-
-	num_wormhole_pairs = { min = 0 max = 5 }
-	num_wormhole_pairs_default = 1
-	num_gateways = { min = 0 max = 5 }
-	num_gateways_default = 1
-	num_hyperlanes = { min=0.5 max= 3 }
-	num_hyperlanes_default = 1
 `;
 
 const MEDIUM = `
-	num_empires = { min = 0 max = 18 }	#limits player customization
-	num_empire_default = 9
 	fallen_empire_default = 2
 	fallen_empire_max = 3
 	marauder_empire_default = 2
 	marauder_empire_max = 2
 	advanced_empire_default = 2
-	colonizable_planet_odds = 1.0
-	primitive_odds = 1.0
 	crisis_strength = 1.0
 	extra_crisis_strength = { 10 25 }
-
-	# num_nebulas	= 6
-	# nebula_size = 60
-	# nebula_min_dist = 200
-
-	num_wormhole_pairs = { min = 0 max = 5 }
-	num_wormhole_pairs_default = 1
-	num_gateways = { min = 0 max = 5 }
-	num_gateways_default = 1
-	num_hyperlanes = { min=0.5 max= 3 }
-	num_hyperlanes_default = 1
 `;
 
 const LARGE = `
-	num_empires = { min = 0 max = 24 }	#limits player customization
-	num_empire_default = 12
 	fallen_empire_default = 3
 	fallen_empire_max = 4
 	marauder_empire_default = 2
 	marauder_empire_max = 3
 	advanced_empire_default = 3
-	colonizable_planet_odds = 1.0
-	primitive_odds = 1.0
 	crisis_strength = 1.25
 	extra_crisis_strength = { 10 25 }
-
-	# num_nebulas	= 8
-	# nebula_size = 60
-	# nebula_min_dist = 200
-
-	num_wormhole_pairs = { min = 0 max = 5 }
-	num_wormhole_pairs_default = 1
-	num_gateways = { min = 0 max = 5 }
-	num_gateways_default = 1
-	num_hyperlanes = { min=0.5 max= 3 }
-	num_hyperlanes_default = 1
 `;
 
 const HUGE = `
- 	num_empires = { min = 0 max = 30 }	#limits player customization
-	num_empire_default = 15
 	fallen_empire_default = 4
 	fallen_empire_max = 6
 	marauder_empire_default = 3
 	marauder_empire_max = 3
 	advanced_empire_default = 4
-	colonizable_planet_odds = 1.0
-	primitive_odds = 1.0
 	crisis_strength = 1.5
 	extra_crisis_strength = { 10 25 }
-
-	# num_nebulas	= 10
-	# nebula_size = 60
-	# nebula_min_dist = 200
-
-	num_wormhole_pairs = { min = 0 max = 5 }
-	num_wormhole_pairs_default = 1
-	num_gateways = { min = 0 max = 5 }
-	num_gateways_default = 1
-	num_hyperlanes = { min=0.5 max= 3 }
-	num_hyperlanes_default = 1
 `;
 
 export function generateStellarisGalaxy(
+	name: string,
 	stars: [number, number][],
 	connections: [[number, number], [number, number]][],
 	wormholes: [[number, number], [number, number]][],
 	potentialHomeStars: string[],
 	preferredHomeStars: string[],
 ): string {
+	const aiEmpireSettings = `
+ 	num_empires = { min = 0 max = ${Math.round(potentialHomeStars.length / SPAWNS_PER_MAX_AI_EMPIRE)} }	#limits player customization; AI empires don't account for all spawns, so we need to set the max lower than the number of spawn points
+	num_empire_default = ${Math.round(potentialHomeStars.length / SPAWNS_PER_MAX_AI_EMPIRE / 2)}
+	`;
+
 	let sizeBasedSettings = TINY;
 	if (stars.length >= 400) sizeBasedSettings = SMALL;
 	if (stars.length >= 600) sizeBasedSettings = MEDIUM;
@@ -213,14 +152,21 @@ export function generateStellarisGalaxy(
 				`\tadd_hyperlane = { from = "${keyToId[a.toString()]}" to = "${keyToId[b.toString()]}" }`,
 		)
 		.join('\n');
-	return [`static_galaxy_scenario = {`, COMMON, sizeBasedSettings, systems, hyperlanes, '}'].join(
-		'\n\n',
-	);
+	return [
+		`static_galaxy_scenario = {`,
+		`\tname="${name}"`,
+		COMMON,
+		aiEmpireSettings,
+		sizeBasedSettings,
+		systems,
+		hyperlanes,
+		'}',
+	].join('\n\n');
 }
 
 export function calcNumStartingStars(stars: [number, number][]) {
 	// 6 per 200 is the vanilla num_empires max, but somethings cause additional empires to spawn (players, some origins), so lets increase by 50%
-	return Math.round((stars.length / 200) * 6 * 1.5);
+	return Math.round((stars.length / 200) * 6 * SPAWNS_PER_MAX_AI_EMPIRE);
 }
 
 function getFallenEmpireOrigin(

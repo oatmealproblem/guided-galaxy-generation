@@ -1,0 +1,13 @@
+is_painted_galaxy = {
+	# we need a way to if the galaxy is a painted galaxy before any effects have run
+	# check if the galaxy size is not a vanilla size
+	# this could cause issues if using a modded-size non-painted galaxy, but users should be disabling this mod anyway if not playing a painted galaxy
+	NOR = {
+		# vanilla
+		galaxy_size = tiny
+		galaxy_size = small
+		galaxy_size = medium
+		galaxy_size = large
+		galaxy_size = huge
+	}
+}

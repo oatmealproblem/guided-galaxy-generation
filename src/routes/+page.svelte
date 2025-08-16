@@ -5,7 +5,7 @@
 	import createGraph, { type Graph, type Link } from 'ngraph.graph';
 	// @ts-expect-error -- no 1st or 3rd party type available
 	import kruskal from 'ngraph.kruskal';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
@@ -524,25 +524,40 @@
 		}
 	}
 
-	let downloadUrl = $derived(
-		URL.createObjectURL(
-			new Blob(
-				[
-					generateStellarisGalaxy(
-						stars.current,
-						connections.current,
-						wormholes.current,
-						potentialHomeStars.current,
-						preferredHomeStars.current,
-					),
-				],
-				{
-					type: 'text/plain',
-				},
-			),
-		),
+	let galaxyName = new LocalStorageState('name', 'Painted Galaxy');
+	let fileName = $derived(
+		galaxyName.current
+			.toLowerCase()
+			.replaceAll(' ', '_')
+			.replaceAll(/\/\\<>:"\|\?\*/g, ''),
 	);
-	let downloadDisabled = $derived(stars.current.length === 0 || connections.current.length === 0);
+
+	// debounce mod generation
+	let downloadUrl = $state('');
+	$effect(() => {
+		untrack(() => {
+			downloadUrl = '';
+		});
+		if (step === Step.MOD && galaxyName.current) {
+			// get the params now to trigger reactivity (untracked once we're in the timeout)
+			const params: Parameters<typeof generateStellarisGalaxy> = [
+				galaxyName.current,
+				stars.current,
+				connections.current,
+				wormholes.current,
+				potentialHomeStars.current,
+				preferredHomeStars.current,
+			];
+			const timeout = setTimeout(() => {
+				downloadUrl = URL.createObjectURL(
+					new Blob([generateStellarisGalaxy(...params)], { type: 'text/plain' }),
+				);
+			}, 500);
+			return () => clearTimeout(timeout);
+		}
+	});
+	let downloadInvalid = $derived(stars.current.length === 0 || connections.current.length === 0);
+	let downloadDisabled = $derived(downloadUrl.length === 0 || downloadInvalid);
 	let downloadLink = $state<HTMLAnchorElement>();
 
 	function throttle<Args extends unknown[]>(fn: (...args: Args) => void, ms: number) {
@@ -948,8 +963,11 @@
 				<small>6.</small>
 				Mod
 			</summary>
-			<div>
-				<a href={downloadUrl} hidden download="painted_galaxy.txt" bind:this={downloadLink}>
+			<fieldset>
+				<label>
+					Name <input bind:value={galaxyName.current} />
+				</label>
+				<a href={downloadUrl} hidden download="{fileName}.txt" bind:this={downloadLink}>
 					Download Stellaris Map
 				</a>
 				<input
@@ -960,14 +978,14 @@
 					}}
 					value="Download Map"
 				/>
-				{#if downloadDisabled}
+				{#if downloadInvalid}
 					<input hidden aria-invalid="true" />
 					<small>You must generate stars and hyperlanes first</small>
 				{/if}
 				<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3532904115" target="_blank">
 					Subscribe and read instructions on the Workshop
 				</a>
-			</div>
+			</fieldset>
 		</details>
 	</form>
 </div>

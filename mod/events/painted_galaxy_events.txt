@@ -6,6 +6,9 @@ planet_event = {
 	id = painted_galaxy.1
 	is_triggered_only = yes
 	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
 	immediate = {
 		if = {
 			limit = {
@@ -20,10 +23,14 @@ planet_event = {
 	}
 }
 
+# spawn non-random wormholes
 event = {
 	id = painted_galaxy.2
 	is_triggered_only = yes
 	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
 	immediate = {
 		painted_galaxy_create_wormhole_pair = { NUMBER = 0 }
 		painted_galaxy_create_wormhole_pair = { NUMBER = 1 }

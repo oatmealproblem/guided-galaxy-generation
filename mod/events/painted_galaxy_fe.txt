@@ -4,6 +4,9 @@ event = {
 	id = painted_galaxy_fe.1
 	hide_window = yes
 	is_triggered_only = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
 	immediate = {
 		set_spawn_system_batch = begin
 		# global event country hasn't been created yet, just use a random one
