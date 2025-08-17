@@ -267,22 +267,48 @@
 			const index = y * WIDTH * 4 + x * 4 + 3;
 			return imageData.data[index];
 		}
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- we're not using this for reactivity, just temporary optimization
-		const added = new Set<string>();
-		let attempts = 0;
-		while (added.size < numberOfStars.current) {
-			if (attempts >= numberOfStars.current * 1000) {
-				console.error(
-					`Max star attempts reached; abandoned after creating ${added.size} of ${numberOfStars.current}`,
-				);
+
+		// count image and row alpha totals, to use for random weighted
+		let total = 0;
+		const rows: { total: number; values: number[] }[] = [];
+		for (let y = 0; y < HEIGHT; y++) {
+			const row = { total: 0, values: [] as number[] };
+			rows.push(row);
+			for (let x = 0; x < WIDTH; x++) {
+				const value = getAlpha(x, y);
+				total += value;
+				row.total += value;
+				row.values.push(value);
+			}
+		}
+
+		// find a random pixel, using the alpha as weight
+		for (let i = 0; i < numberOfStars.current; i++) {
+			if (total === 0) {
+				// we've used all pixels with nonzero alpha
+				console.warn(`Generated ${i} stars; no more valid locations`);
 				break;
 			}
-			attempts++;
-			const x = Math.floor(Math.random() * WIDTH);
-			const y = Math.floor(Math.random() * HEIGHT);
-			if (!added.has(`${x},${y}`) && Math.random() < (getAlpha(x, y) / 255) ** 2) {
-				added.add(`${x},${y}`);
-				stars.current.push([x, y]);
+			const random = Math.floor(Math.random() * total);
+			let current = 0;
+			for (let y = 0; y < HEIGHT; y++) {
+				const row = rows[y];
+				if (current + row.total > random) {
+					for (let x = 0; x < WIDTH; x++) {
+						const value = row.values[x];
+						if (current + value > random) {
+							stars.current.push([x, y]);
+							row.total -= value;
+							total -= value;
+							break;
+						} else {
+							current += value;
+						}
+					}
+					break;
+				} else {
+					current += row.total;
+				}
 			}
 		}
 		diffuseClusters();
