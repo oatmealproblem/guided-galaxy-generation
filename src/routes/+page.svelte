@@ -153,12 +153,15 @@
 		}
 	}
 
-	function convertGrayscaleToOpacity() {
+	function convertGrayscaleToOpacity({ clearLowOpacity = false } = {}) {
 		if (!ctx) return;
 		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 		for (let i = 0; i < imageData.data.length; i += 4) {
 			// convert grayscale to transparency
 			imageData.data[i + 3] = Math.round((imageData.data[i] / 255) * imageData.data[i + 3]);
+			if (clearLowOpacity && imageData.data[i + 3] <= 2) {
+				imageData.data[i + 3] = 0;
+			}
 			imageData.data[i] = 255;
 			imageData.data[i + 1] = 255;
 			imageData.data[i + 2] = 255;
@@ -842,7 +845,7 @@
 							if (ctx && file) {
 								ctx.filter = 'grayscale(1)';
 								ctx.drawImage(await createImageBitmap(file), 0, 0, 900, 900);
-								convertGrayscaleToOpacity();
+								convertGrayscaleToOpacity({ clearLowOpacity: true });
 								saveCanvas();
 								canvas?.toBlob(async (blob) => {
 									if (blob) {
