@@ -262,6 +262,7 @@
 		connections.current.length = 0;
 		wormholes.current.length = 0;
 		potentialHomeStars.current.length = 0;
+		preferredHomeStars.current.length = 0;
 		const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 		function getAlpha(x: number, y: number) {
 			const index = y * WIDTH * 4 + x * 4 + 3;
@@ -298,6 +299,7 @@
 						const value = row.values[x];
 						if (current + value > random) {
 							stars.current.push([x, y]);
+							row.values[x] = 0;
 							row.total -= value;
 							total -= value;
 							break;
