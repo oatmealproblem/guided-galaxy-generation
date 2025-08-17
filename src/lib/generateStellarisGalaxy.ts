@@ -82,6 +82,7 @@ export function generateStellarisGalaxy(
 	wormholes: [[number, number], [number, number]][],
 	potentialHomeStars: string[],
 	preferredHomeStars: string[],
+	nebulas: [number, number, number][],
 ): string {
 	const aiEmpireSettings = `
  	num_empires = { min = 0 max = ${Math.round(potentialHomeStars.length / SPAWNS_PER_MAX_AI_EMPIRE)} }	#limits player customization; AI empires don't account for all spawns, so we need to set the max lower than the number of spawn points
@@ -112,7 +113,7 @@ export function generateStellarisGalaxy(
 
 	const keyToId = Object.fromEntries(stars.map((coords, i) => [coords.toString(), i]));
 
-	const systems = stars
+	const systemsEntries = stars
 		.map((star, i) => {
 			const basics = `id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - WIDTH / 2)} y = ${star[1] - HEIGHT / 2} }`;
 			const preferredModifier = preferredHomeStars.includes(star.toString())
@@ -146,20 +147,58 @@ export function generateStellarisGalaxy(
 			return `\tsystem = { ${basics} ${empireSpawn} ${effect} }`;
 		})
 		.join('\n');
-	const hyperlanes = connections
+
+	const hyperlanesEntries = connections
 		.map(
 			([a, b]) =>
 				`\tadd_hyperlane = { from = "${keyToId[a.toString()]}" to = "${keyToId[b.toString()]}" }`,
 		)
 		.join('\n');
+
+	// find groups of overlapping nebulas, so we can treat them as a single non-circular nebula
+	// (only the largest nebula in each groups gets a name on the map, the rest are given a blank name)
+	let nebulaGroups: [number, number, number][][] = [];
+	for (const nebula of nebulas) {
+		const overlappingGroups = nebulaGroups.filter((group) =>
+			group.some(
+				(groupNebula) =>
+					Math.hypot(groupNebula[0] - nebula[0], groupNebula[1] - nebula[1]) <
+					groupNebula[2] + nebula[2],
+			),
+		);
+		if (overlappingGroups.length === 0) {
+			// create new group containing just this nebula
+			nebulaGroups.push([nebula]);
+		} else if (overlappingGroups.length === 1) {
+			// add to group
+			overlappingGroups[0].push(nebula);
+		} else {
+			// remove the overlapping groups
+			nebulaGroups = nebulaGroups.filter((group) => !overlappingGroups.includes(group));
+			// create a new group combining the overlapping groups and this nebula
+			nebulaGroups.push([...overlappingGroups.flat(), nebula]);
+		}
+	}
+	// sort nebulas in each group by size
+	nebulaGroups.forEach((group) => group.sort((a, b) => b[2] - a[2]));
+	const nebulaEntries = nebulaGroups
+		.flatMap((group) =>
+			group.map(
+				([x, y, r], i) =>
+					`\tnebula = { ${i !== 0 ? 'name = " "' : ''} position = { x = ${-(x - WIDTH / 2)} y = ${y - HEIGHT / 2} } radius = ${r} }`,
+			),
+		)
+		.join('\n');
+
 	return [
 		`static_galaxy_scenario = {`,
 		`\tname="${name}"`,
 		COMMON,
 		aiEmpireSettings,
 		sizeBasedSettings,
-		systems,
-		hyperlanes,
+		systemsEntries,
+		hyperlanesEntries,
+		nebulaEntries,
 		'}',
 	].join('\n\n');
 }

@@ -9,7 +9,17 @@
 
 	import { calcNumStartingStars, generateStellarisGalaxy } from '$lib/generateStellarisGalaxy';
 	import { LocalStorageState } from '$lib/state.svelte';
-	import { CENTER_MARK_SIZE, HEIGHT, MAX_CONNECTION_LENGTH, WIDTH } from '$lib/constants';
+	import {
+		CENTER_MARK_SIZE,
+		HEIGHT,
+		MAX_CONNECTION_LENGTH,
+		NUM_RANDOM_NEBULAS,
+		RANDOM_NEBULA_MAX_RADIUS,
+		RANDOM_NEBULA_MIN_RADIUS,
+		RANDOM_NEBULA_MIN_DISTANCE,
+		WIDTH,
+		CUSTOM_NEBULA_MIN_RADIUS,
+	} from '$lib/constants';
 	import { arePointsEqual } from '$lib/utils';
 
 	let canvas = $state<HTMLCanvasElement>();
@@ -18,6 +28,7 @@
 	const Step = {
 		PAINT: 'PAINT',
 		STARS: 'STARS',
+		NEBULAS: 'NEBULAS',
 		HYPERLANES: 'HYPERLANES',
 		WORMHOLES: 'WORMHOLES',
 		SPAWNS: 'SPAWNS',
@@ -26,6 +37,7 @@
 	type Step = (typeof Step)[keyof typeof Step];
 	let paintStepOpen = $state(true);
 	let starsStepOpen = $state(false);
+	let nebulasStepOpen = $state(false);
 	let hyperlanesStepOpen = $state(false);
 	let wormholesStepOpen = $state(false);
 	let spawnsStepOpen = $state(false);
@@ -33,6 +45,7 @@
 	let step = $derived.by(() => {
 		if (paintStepOpen) return Step.PAINT;
 		if (starsStepOpen) return Step.STARS;
+		if (nebulasStepOpen) return Step.NEBULAS;
 		if (hyperlanesStepOpen) return Step.HYPERLANES;
 		if (wormholesStepOpen) return Step.WORMHOLES;
 		if (spawnsStepOpen) return Step.SPAWNS;
@@ -243,6 +256,8 @@
 	let numberOfStars = new LocalStorageState('numberOfStars', 600);
 	let clusterDiffusion = new LocalStorageState('clusterDiffusion', 10);
 	let stars = new LocalStorageState<[number, number][]>('stars', []);
+	let nebulas = new LocalStorageState<[number, number, number][]>('nebulas', []);
+	let creatingNebula = $state<[number, number, number] | null>(null);
 
 	function toggleStar(point: [number, number]) {
 		const index = stars.current.findIndex((star) => arePointsEqual(star, point));
@@ -317,6 +332,7 @@
 			}
 		}
 		diffuseClusters();
+		randomizeNebulas();
 	}
 
 	function diffuseClusters() {
@@ -327,6 +343,26 @@
 		stars.current = Array.from(
 			new Set(simulation.nodes().map(({ x, y }) => [Math.round(x), Math.round(y)].toString())),
 		).map((v) => v.split(',').map((s) => parseInt(s)) as [number, number]);
+	}
+
+	function randomizeNebulas() {
+		nebulas.current = [];
+		let potentialStars = stars.current;
+		for (let i = 0; i < NUM_RANDOM_NEBULAS; i++) {
+			if (potentialStars.length !== 0) {
+				const randomIndex = Math.floor(Math.random() * potentialStars.length);
+				const nebula: [number, number, number] = [
+					...potentialStars[randomIndex],
+					RANDOM_NEBULA_MIN_RADIUS +
+						Math.floor(Math.random() * (RANDOM_NEBULA_MAX_RADIUS - RANDOM_NEBULA_MIN_RADIUS)),
+				];
+				nebulas.current.push(nebula);
+				potentialStars = potentialStars.filter(
+					(star) =>
+						Math.hypot(star[0] - nebula[0], star[1] - nebula[1]) >= RANDOM_NEBULA_MIN_DISTANCE,
+				);
+			}
+		}
 	}
 
 	let connectedness = new LocalStorageState('connectedness', 0.5);
@@ -578,6 +614,7 @@
 				wormholes.current,
 				potentialHomeStars.current,
 				preferredHomeStars.current,
+				nebulas.current,
 			];
 			const timeout = setTimeout(() => {
 				downloadUrl = URL.createObjectURL(
@@ -625,6 +662,10 @@
 			});
 			recordStroke();
 			strokePoints = [];
+		}
+		if (creatingNebula) {
+			nebulas.current.push(creatingNebula);
+			creatingNebula = null;
 		}
 	}}
 />
@@ -677,13 +718,25 @@
 				// some users were experiencing duplicate clicks that instantly toggled on/off; add a small throttle
 			}, 250)}
 			onpointerdown={(e) => {
+				if (e.button !== 0) return;
 				if (step === Step.PAINT) {
 					strokePoints = [{ x: e.offsetX, y: e.offsetY }];
+				} else if (step === Step.NEBULAS) {
+					if (!e.shiftKey) {
+						creatingNebula = [e.offsetX, e.offsetY, CUSTOM_NEBULA_MIN_RADIUS];
+					}
 				}
 			}}
 			onpointermove={(e) => {
 				if (step === Step.PAINT) {
 					if (strokePoints.length) strokePoints.push({ x: e.offsetX, y: e.offsetY });
+				} else if (step === Step.NEBULAS) {
+					if (creatingNebula) {
+						creatingNebula[2] = Math.max(
+							CUSTOM_NEBULA_MIN_RADIUS,
+							Math.round(Math.hypot(e.offsetX - creatingNebula[0], e.offsetY - creatingNebula[1])),
+						);
+					}
 				}
 			}}
 			style:cursor={step === Step.PAINT
@@ -770,6 +823,43 @@
 					}}
 				/>
 			{/each}
+			{#if step === Step.NEBULAS}
+				{#each nebulas.current as [cx, cy, r] (`${cx},${cy},${r}`)}
+					<circle
+						{cx}
+						{cy}
+						{r}
+						fill="var(--pico-primary)"
+						fill-opacity="0.25"
+						stroke="var(--pico-primary)"
+						stroke-width="1"
+						stroke-opacity="0.5"
+						onclick={(e) => {
+							if (step === Step.NEBULAS && e.shiftKey) {
+								e.stopPropagation();
+								nebulas.current.splice(
+									nebulas.current.findIndex(
+										(nebula) => cx === nebula[0] && cy === nebula[1] && r === nebula[2],
+									),
+									1,
+								);
+							}
+						}}
+					/>
+				{/each}
+			{/if}
+			{#if creatingNebula}
+				<circle
+					cx={creatingNebula[0]}
+					cy={creatingNebula[1]}
+					r={creatingNebula[2]}
+					fill="var(--pico-primary)"
+					fill-opacity="0.5"
+					stroke="var(--pico-primary)"
+					stroke-width="1"
+					stroke-opacity="1"
+				/>
+			{/if}
 		</svg>
 	</div>
 	<form class="controls">
@@ -965,9 +1055,21 @@
 			</fieldset>
 		</details>
 		<hr />
-		<details name="step" bind:open={spawnsStepOpen}>
+		<details name="step" bind:open={nebulasStepOpen}>
 			<summary>
 				<small>5.</small>
+				Nebulas
+				<small>(optional)</small>
+			</summary>
+			<fieldset>
+				<input type="button" value="Randomize" onclick={randomizeNebulas} />
+				<small>Click and drag the map to create a nebula. Shift+click to delete a nebula.</small>
+			</fieldset>
+		</details>
+		<hr />
+		<details name="step" bind:open={spawnsStepOpen}>
+			<summary>
+				<small>6.</small>
 				Spawns
 				<small>(optional)</small>
 			</summary>
@@ -991,7 +1093,7 @@
 		<hr />
 		<details name="step" bind:open={modStepOpen}>
 			<summary>
-				<small>6.</small>
+				<small>7.</small>
 				Mod
 			</summary>
 			<fieldset>
