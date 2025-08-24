@@ -1,0 +1,28 @@
+namespace = painted_galaxy_ratling
+
+# spawn missing ratling systems
+event = {
+	id = painted_galaxy_ratling.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+		any_system = {
+			has_star_flag = ratling_home_system
+		}
+		# is_painted_galaxy is potentially inaccurate, so also check the count of ratling systems
+		count_system = {
+			count = 1
+			limit = {
+				has_star_flag = ratling_system
+			}
+		}
+	}
+	immediate = {
+		random_system = {
+			limit = { has_star_flag = ratling_home_system }
+			spawn_system = { initializer = ratling_1_2 }
+			spawn_system = { initializer = ratling_1_3 }
+		}
+	}
+}
