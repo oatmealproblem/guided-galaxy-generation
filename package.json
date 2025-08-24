@@ -24,6 +24,7 @@
 		"@types/d3-force": "^3.0.10",
 		"d3-delaunay": "^6.0.4",
 		"d3-force": "^3.0.0",
+		"effect": "^3.17.9",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",

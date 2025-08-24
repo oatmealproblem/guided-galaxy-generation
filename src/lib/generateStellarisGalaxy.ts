@@ -1,3 +1,5 @@
+import { Array, Iterable, pipe } from 'effect';
+
 import { FALLEN_EMPIRE_SPAWN_RADIUS, HEIGHT, SPAWNS_PER_MAX_AI_EMPIRE, WIDTH } from './constants';
 import { arePointsEqual } from './utils';
 
@@ -113,9 +115,33 @@ export function generateStellarisGalaxy(
 
 	const keyToId = Object.fromEntries(stars.map((coords, i) => [coords.toString(), i]));
 
+	const systems1JumpFromSpawn = new Set(
+		connections.flatMap(([from, to]) => {
+			const fromIsSpawn = potentialHomeStars.includes(from.toString());
+			const toIsSpawn = potentialHomeStars.includes(to.toString());
+			if (fromIsSpawn && !toIsSpawn) return [to.toString()];
+			if (toIsSpawn && !fromIsSpawn) return [from.toString()];
+			return [];
+		}),
+	);
+	const systems2JumpsFromSpawn = new Set(
+		connections.flatMap(([from, to]) => {
+			const fromIsSpawn = potentialHomeStars.includes(from.toString());
+			const toIsSpawn = potentialHomeStars.includes(to.toString());
+			const fromIsAdjacent = systems1JumpFromSpawn.has(from.toString());
+			const toIsAdjacent = systems1JumpFromSpawn.has(to.toString());
+			if (fromIsAdjacent && !toIsAdjacent && !toIsSpawn) return [to.toString()];
+			if (toIsAdjacent && !fromIsAdjacent && !fromIsSpawn) return [from.toString()];
+			return [];
+		}),
+	);
+
 	const systemsEntries = stars
 		.map((star, i) => {
 			const basics = `id = "${keyToId[star.toString()]}" position = { x = ${-(star[0] - WIDTH / 2)} y = ${star[1] - HEIGHT / 2} }`;
+
+			let initializer = '';
+			let spawnWeight = '';
 			const preferredModifier = preferredHomeStars.includes(star.toString())
 				? 'modifier = { add = 100 always = yes }' // simply increasing the base weight doesn't work for some reason, need to use a modifier
 				: '';
@@ -126,9 +152,25 @@ export function generateStellarisGalaxy(
 				preferredModifier === ''
 					? `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`
 					: '';
-			const empireSpawn = potentialHomeStars.includes(star.toString())
-				? `initializer = random_empire_init_0${(i % 6) + 1} spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`
-				: '';
+			if (potentialHomeStars.includes(star.toString())) {
+				initializer = `random_empire_init_0${(i % 6) + 1}`;
+				spawnWeight = `spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`;
+			} else if (systems1JumpFromSpawn.has(star.toString())) {
+				// all systems with 1 of a spawn point get a random basic initializer
+				// this mimics the effect of the "empire_cluster" flag in a random galaxy
+				initializer = `initializer = ${getRandomSystemBasicSystemInitializer()}`;
+			} else if (systems2JumpsFromSpawn.has(star.toString())) {
+				// in a random galaxy, all systems within 2 of a spawn also get the "empire_cluster" effect
+				// however, not all spawn points will actually be used, so we don't want to overly restrict system spawns, so a random chance is used
+				// the chance is based on the number systems within 2 jumps of a spawn point, so it scaled inversely with the connectedness and number of spawns
+				// eg on a low connectivity map, systems within 2 are more likely to get a basic init; this helps empires not get boxed in by hostile creatures etc
+				const numBasicSystems =
+					potentialHomeStars.length + systems1JumpFromSpawn.size + systems2JumpsFromSpawn.size;
+				const chance = 1 - numBasicSystems / stars.length;
+				if (Math.random() < chance) {
+					initializer = `initializer = ${getRandomSystemBasicSystemInitializer()}`;
+				}
+			}
 
 			const thisStarFallenEmpireSpawns = fallenEmpireSpawns.filter((fe) => fe.star === star);
 			const feSpawnEffect =
@@ -144,7 +186,7 @@ export function generateStellarisGalaxy(
 
 			const effects = [feSpawnEffect, wormholeEffect];
 			const effect = effects.some(Boolean) ? `effect = { ${effects.join(' ')} }` : '';
-			return `\tsystem = { ${basics} ${empireSpawn} ${effect} }`;
+			return `\tsystem = { ${basics} ${initializer} ${spawnWeight} ${effect} }`;
 		})
 		.join('\n');
 
@@ -250,4 +292,24 @@ function canSpawnFallenEmpireInDirection(
 				Math.hypot(point[0] - origin[0], point[1] - origin[1]) >= FALLEN_EMPIRE_SPAWN_RADIUS * 2,
 		)
 	);
+}
+
+const WEIGHTED_MISC_SYSTEM_INITALIZERS = pipe(
+	Iterable.empty(),
+	Iterable.appendAll(Iterable.replicate('basic_init_01', 20)),
+	Iterable.appendAll(Iterable.replicate('basic_init_02', 20)),
+	Iterable.appendAll(Iterable.replicate('basic_init_03', 10)),
+	Iterable.appendAll(Iterable.replicate('basic_init_04', 10)),
+	Iterable.appendAll(Iterable.replicate('basic_init_05', 6)),
+	Iterable.appendAll(Iterable.replicate('basic_init_06', 4)),
+	Iterable.appendAll(Iterable.replicate('asteroid_init_01', 2)),
+	Iterable.appendAll(Iterable.replicate('binary_init_01', 6)),
+	Iterable.appendAll(Iterable.replicate('binary_init_02', 4)),
+	Iterable.appendAll(Iterable.replicate('trinary_init_01', 3)),
+	Iterable.appendAll(Iterable.replicate('trinary_init_02', 3)),
+	Array.fromIterable,
+);
+function getRandomSystemBasicSystemInitializer() {
+	const index = Math.floor(Math.random() * WEIGHTED_MISC_SYSTEM_INITALIZERS.length);
+	return WEIGHTED_MISC_SYSTEM_INITALIZERS[index];
 }
