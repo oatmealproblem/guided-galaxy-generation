@@ -1,0 +1,24 @@
+namespace = painted_galaxy_homeworld
+
+# correct homeworld planet class
+# from = founder primary species
+planet_event = {
+	id = painted_galaxy_homeworld.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
+	immediate = {
+		if = {
+			limit = {
+				is_artificial = no
+				is_ideal_planet_class = { who = from status = no }
+				NAND = { is_planet_class = pc_relic owner = { has_origin = origin_shoulders_of_giants } }
+				NAND = { is_planet_class = pc_nuked owner = { OR = { has_origin = origin_post_apocalyptic has_origin = origin_post_apocalyptic_machines } } }
+			}
+			change_pc = from
+			reset_planet = yes
+		}
+	}
+}

@@ -22,7 +22,8 @@ event = {
 						value > painted_galaxy_fe_spawns
 					}
 				}
-				add_variable = {
+				# as of 4.0, add_variable is available, but using change_variable still for easier 3.14 compat
+				change_variable = {
 					which = painted_galaxy_fe_spawns
 					value = 1
 				}

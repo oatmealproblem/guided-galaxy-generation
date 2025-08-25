@@ -1,14 +1,2 @@
-# these should run before vanilla and most mods
-
-on_game_start = {
-	events = {
-		painted_galaxy_fe.1 # spawn fallen empires
-		painted_galaxy_ratling.1 # spawn missing ratling systems
-	}
-}
-
-empire_init_capital_planet = {
-	events = {
-		painted_galaxy.1 # correct home planets
-	}
-}
+# moved to !!!
+# keeping this around because Steam doesn't reliably delete workshop files

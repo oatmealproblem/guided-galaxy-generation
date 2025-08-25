@@ -1,0 +1,55 @@
+painted_galaxy_create_wormhole_pair = {
+	random_system = {
+		limit = { has_star_flag = painted_galaxy_wormhole_$NUMBER$ }
+		if = {
+			limit = { has_natural_wormhole = no }
+			save_event_target_as = painted_galaxy_wormhole_from
+		} else = {
+			closest_system = {
+				limit = { has_natural_wormhole = no }
+				max_steps = 6
+				save_event_target_as = painted_galaxy_wormhole_from
+			}
+		}
+		random_system = {
+			limit = {
+				has_star_flag = painted_galaxy_wormhole_$NUMBER$
+				NOT = { is_same_value = prev }
+			}
+			if = {
+				limit = { has_natural_wormhole = no }
+				save_event_target_as = painted_galaxy_wormhole_to
+			} else = {
+				closest_system = {
+					limit = { has_natural_wormhole = no }
+					max_steps = 6
+					save_event_target_as = painted_galaxy_wormhole_to
+				}
+			}
+		}
+	}
+	if = {
+		limit = {
+			# check if event_targets are set and don't have wormhole (to make sure we're not reusing an earlier one)
+			exists = event_target:painted_galaxy_wormhole_from
+			event_target:painted_galaxy_wormhole_from = { has_natural_wormhole = no }
+			exists = event_target:painted_galaxy_wormhole_to
+			event_target:painted_galaxy_wormhole_to = { has_natural_wormhole = no }
+		}
+		event_target:painted_galaxy_wormhole_from = {
+			spawn_natural_wormhole = {
+				bypass_type = wormhole
+				random_pos = yes
+				orbit_angle = 360
+			}
+		}
+		event_target:painted_galaxy_wormhole_to = {
+			spawn_natural_wormhole = {
+				bypass_type = wormhole
+				random_pos = yes
+				orbit_angle = 360
+			}
+			link_wormholes = event_target:painted_galaxy_wormhole_from
+		}
+	}
+}

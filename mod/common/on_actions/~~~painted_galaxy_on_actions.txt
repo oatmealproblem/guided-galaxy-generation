@@ -1,0 +1,7 @@
+# these should run after vanilla and most mods
+
+on_game_start = {
+	events = {
+		painted_galaxy_wormhole.1 # spawn wormholes
+	}
+}

@@ -1,7 +1,2 @@
-# these should run after vanilla and most mods
-
-on_game_start = {
-	events = {
-		painted_galaxy.2 # spawn wormholes
-	}
-}
+# moved to ~~~
+# keeping this around because Steam doesn't reliably delete workshop files
