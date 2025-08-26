@@ -21,8 +21,10 @@ event = {
 	immediate = {
 		random_system = {
 			limit = { has_star_flag = ratling_home_system }
+			set_spawn_system_batch = begin
 			spawn_system = { initializer = ratling_1_2 }
 			spawn_system = { initializer = ratling_1_3 }
+			set_spawn_system_batch = end
 		}
 	}
 }
