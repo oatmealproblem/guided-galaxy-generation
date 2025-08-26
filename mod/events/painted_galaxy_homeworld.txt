@@ -7,7 +7,7 @@ planet_event = {
 	is_triggered_only = yes
 	hide_window = yes
 	trigger = {
-		is_painted_galaxy = yes
+		is_maybe_painted_galaxy = yes
 	}
 	immediate = {
 		if = { # resource consolidation, ie machine world start

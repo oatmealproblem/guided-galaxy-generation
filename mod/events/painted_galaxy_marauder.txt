@@ -6,7 +6,7 @@ event = {
 	is_triggered_only = yes
 	hide_window = yes
 	trigger = {
-		is_painted_galaxy = yes
+		is_maybe_painted_galaxy = yes
 	}
 	immediate = {
 		set_spawn_system_batch = begin

@@ -1,4 +1,4 @@
-is_painted_galaxy = {
+is_maybe_painted_galaxy = {
 	# we need a way to if the galaxy is a painted galaxy before any effects have run
 	# check if the galaxy size is not a vanilla size
 	# this could cause issues if using a modded-size non-painted galaxy, but users should be disabling this mod anyway if not playing a painted galaxy

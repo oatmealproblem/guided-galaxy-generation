@@ -2,7 +2,7 @@ painted_galaxy_spawn_marauder_systems_2_and_3 = {
 	random_system = {
 		limit = {
 			has_star_flag = marauder_capital_$NUMBER$
-			# sanity check (because is_painted_galaxy is not 100% accurate)
+			# sanity check (because is_maybe_painted_galaxy is not 100% accurate)
 			NOT = { any_neighbor_system = { has_star_flag = marauder_system } }
 		}
 

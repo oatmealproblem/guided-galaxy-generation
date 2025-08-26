@@ -6,7 +6,7 @@ event = {
 	is_triggered_only = yes
 	hide_window = yes
 	trigger = {
-		is_painted_galaxy = yes
+		is_maybe_painted_galaxy = yes
 	}
 	immediate = {
 		random_system = {
@@ -15,7 +15,7 @@ event = {
 				setting = num_advanced_empires
 			}
 			# static galaxies don't seem to get any advanced starts
-			# but just in case (is_painted_galaxy isn't 100% accurate), let's subtract the number of existing advanced starts
+			# but just in case (is_maybe_painted_galaxy isn't 100% accurate), let's subtract the number of existing advanced starts
 			export_trigger_value_to_variable = {
 				variable = painted_galaxy_num_advanced_empires_current
 				trigger = count_country

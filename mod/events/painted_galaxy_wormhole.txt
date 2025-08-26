@@ -6,7 +6,7 @@ event = {
 	is_triggered_only = yes
 	hide_window = yes
 	trigger = {
-		is_painted_galaxy = yes
+		is_maybe_painted_galaxy = yes
 	}
 	immediate = {
 		painted_galaxy_create_wormhole_pair = { NUMBER = 0 }
