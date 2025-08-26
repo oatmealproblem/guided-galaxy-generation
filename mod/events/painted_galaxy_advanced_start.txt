@@ -64,6 +64,7 @@ event = {
 						every_neighbor_system = {
 							limit = {
 								NOT = { exists = owner }
+								count_fleet_in_system = { count = 0 }
 							}
 							create_starbase = {
 								size = starbase_outpost
