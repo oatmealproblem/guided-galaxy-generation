@@ -1,0 +1,18 @@
+namespace = painted_galaxy_marauder
+
+# spawn missing marauder systems
+event = {
+	id = painted_galaxy_marauder.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
+	immediate = {
+		set_spawn_system_batch = begin
+		painted_galaxy_spawn_marauder_systems_2_and_3 = { NUMBER = 1 }
+		painted_galaxy_spawn_marauder_systems_2_and_3 = { NUMBER = 2 }
+		painted_galaxy_spawn_marauder_systems_2_and_3 = { NUMBER = 3 }
+		set_spawn_system_batch = end
+	}
+}
