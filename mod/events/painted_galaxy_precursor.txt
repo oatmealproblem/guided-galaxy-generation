@@ -1,0 +1,114 @@
+namespace = painted_galaxy_precursor
+
+# add precursor star flag near players
+event = {
+	id = painted_galaxy_precursor.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_maybe_painted_galaxy = yes
+		NOT = {
+			any_system = {
+				OR = {
+					has_star_flag = precursor_1
+					has_star_flag = precursor_2
+					has_star_flag = precursor_3
+					has_star_flag = precursor_4
+					has_star_flag = precursor_5
+					has_star_flag = precursor_baol_1
+					has_star_flag = precursor_zroni_1
+					has_star_flag = precursor_inetian
+					has_star_flag = precursor_adakkaria
+				}
+			}
+		}
+	}
+	immediate = {
+		every_country = {
+			limit = { is_ai = no }
+			# randomly select a precursor
+			# currently there's no way to check for precursors disabled in galaxy settings
+			random_list = {
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_1
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_1 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_2
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_2 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_3
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_3 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_4
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_4 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_5
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_5 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_baol_1
+						factor = 0
+					}
+					modifier = {
+						has_ancrel = no
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_baol_1 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_zroni_1
+						factor = 0
+					}
+					modifier = {
+						has_ancrel = no
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_zroni_1 }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_inetian
+						factor = 0
+					}
+					modifier = {
+						has_cosmic_storms_dlc = no
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_inetian }
+				}
+				100 = {
+					modifier = {
+						has_global_flag = painted_galaxy_precursor_adakkaria
+						factor = 0
+					}
+					modifier = {
+						has_cosmic_storms_dlc = no
+						factor = 0
+					}
+					painted_galaxy_set_precursor_flags = { FLAG = precursor_adakkaria }
+				}
+			}
+		}
+	}
+}
