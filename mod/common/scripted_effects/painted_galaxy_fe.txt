@@ -42,6 +42,7 @@ painted_galaxy_spawn_fe_home_system = {
 painted_galaxy_spawn_fe_system = {
 	spawn_system = {
 		initializer = $INITIALIZER$
+		max_distance = 15
 		effect = {
 			if = {
 				limit = { NOT = { has_hyperlane_to = prev } }

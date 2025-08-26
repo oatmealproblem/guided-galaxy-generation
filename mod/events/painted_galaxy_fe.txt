@@ -91,7 +91,7 @@ event = {
 								country_uses_bio_ships = yes
 							}
 						}
-						country_event = { id = painted_galaxy_fe.10 }
+						country_event = { id = painted_galaxy_fe.60 }
 					}
 				}
 			}
