@@ -1,0 +1,82 @@
+namespace = painted_galaxy_advanced_start
+
+# create advanced starts
+event = {
+	id = painted_galaxy_advanced_start.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_painted_galaxy = yes
+	}
+	immediate = {
+		random_system = {
+			get_galaxy_setup_value = {
+				which = painted_galaxy_num_advanced_empires
+				setting = num_advanced_empires
+			}
+			# static galaxies don't seem to get any advanced starts
+			# but just in case (is_painted_galaxy isn't 100% accurate), let's subtract the number of existing advanced starts
+			export_trigger_value_to_variable = {
+				variable = painted_galaxy_num_advanced_empires_current
+				trigger = count_country
+				parameters = {
+					limit = { has_country_flag = is_advanced_start_AI }
+				}
+			}
+			subtract_variable = {
+				which = painted_galaxy_num_advanced_empires
+				value = painted_galaxy_num_advanced_empires_current
+			}
+			while = {
+				count = painted_galaxy_num_advanced_empires
+				random_country = {
+					limit = {
+						is_ai = yes
+						is_country_type = default
+						NOT = { has_country_flag = is_advanced_start_AI }
+						# only allow origins with advanced_start = yes
+						OR = {
+							has_origin = origin_default
+							has_origin = origin_wilderness
+							has_origin = origin_cybernetic_creed
+							has_origin = origin_arc_welders
+							has_origin = origin_legendary_leader
+							has_origin = origin_toxic_knights
+							has_origin = origin_progenitor_hive
+							has_origin = origin_subterranean
+							has_origin = origin_subterranean_machines
+							has_origin = origin_here_be_dragons
+							has_origin = origin_ocean_paradise
+							has_origin = origin_ocean_machines
+							has_origin = origin_necrophage
+							has_origin = origin_remnants
+							has_origin = origin_shattered_ring
+							has_origin = origin_post_apocalyptic
+							has_origin = origin_post_apocalyptic_machines
+							has_origin = origin_machine
+							has_origin = origin_mechanists
+							has_origin = origin_syncretic_evolution
+							has_origin = origin_tree_of_life
+						}
+					}
+					# claim neighboring systems
+					capital_scope.solar_system = {
+						every_neighbor_system = {
+							limit = {
+								NOT = { exists = owner }
+							}
+							create_starbase = {
+								size = starbase_outpost
+								owner = prevprev
+							}
+						}
+					}
+					# fire any on_actions (for vanilla, only game_start.6, whichs adds tech, gives resources, builds stations)
+					fire_on_action = { on_action = on_become_advanced_empire }
+				}
+			}
+			clear_variable = painted_galaxy_num_advanced_empires
+			clear_variable = painted_galaxy_num_advanced_empires_current
+		}
+	}
+}
