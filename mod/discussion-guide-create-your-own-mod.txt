@@ -1,0 +1,37 @@
+Instead of copying your download txt file to this mod, you can create your own mod. This is easier to share, and won't get deleted if you accidentally unsubscribe from this mod.
+[olist]
+  [*] Initialize the mod
+  [list]
+    [*] Open the launcher
+    [*] Go to the "Mod Library" tab
+    [*] Click "Upload Mod"
+    [*] Click "Create a Mod"
+    [*] Enter whatever values you want, and click "Create Mod"
+  [/list]
+  [*] Open your mod's folder
+  [list]
+    [*] Find the mod in your "Mod Library" in the launcher (there's a search at the top)
+    [*] Hover over the mod and click the 3 dots to the right, then click "Show in Folder"
+  [/list]
+  [*] Create a new folder "map", and inside "map" create a new folder "setup_scenarios"
+  [*] Move the txt file you downloaded to the "setup_scenarios" folder
+  [*] (optional) Upload to the Workshop
+  [list]
+    [*] Open the launcher
+    [*] Go to the "Mod Library" tab
+    [*] Click "Upload Mod"
+    [*] Select your mod in the dropdown
+    [*] Select the steam workshop
+    [*] Enter a description
+    [*] Click "Upload"
+  [/list]
+  [*] Go to your mod's Workshop page
+  [list]
+    [*] In the Stellaris Workshop, hover over "Your Files" (in the sidebar) then click "Files You've Posted"
+    [*] Click the new mod
+  [/list]
+  [*] NEVER subscribe to your own mod; it makes the Stellaris Launcher very confused
+  [*] Click "Change Visibility" (in the sidebar) then click "Public" (or whatever you want)
+  [*] Click "Add/Remove Required Items" (in the sidebar) then add "Paint a Galaxy"
+  [*] Let me know about your mod so I can add it the Paint a Galaxy Community collection!
+[/olist]
