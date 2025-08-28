@@ -1,0 +1,73 @@
+namespace = painted_galaxy_guaranteed_colony
+
+# spawn guaranteed colonies according to settings
+event = {
+	id = painted_galaxy_guaranteed_colony.1
+	is_triggered_only = yes
+	hide_window = yes
+	trigger = {
+		is_maybe_painted_galaxy = yes
+		num_guaranteed_colonies > 0
+		# sanity check
+		NOT = {
+			any_system = {
+				OR = {
+					has_star_flag = neighbor_t1_first_colony
+					has_star_flag = neighbor_t2_second_colony
+				}
+			}
+		}
+	}
+	immediate = {
+		set_spawn_system_batch = begin
+		every_country = {
+			limit = {
+				is_country_type = default
+				# if their ideal planet class is not a normal planet type, they're probably not supposed to get habitable planets
+				# eg life seeded, void dwellers, shattered ring, etc
+				OR = {
+					ideal_planet_class = pc_arid
+					ideal_planet_class = pc_desert
+					ideal_planet_class = pc_savannah
+					ideal_planet_class = pc_continental
+					ideal_planet_class = pc_ocean
+					ideal_planet_class = pc_tropical
+					ideal_planet_class = pc_arctic
+					ideal_planet_class = pc_alpine
+					ideal_planet_class = pc_tundra
+				}
+				# specifically forbidden origins
+				NOT = {
+					has_origin = origin_doomsday
+				}
+			}
+			save_event_target_as = painted_galaxy_current_country
+			capital_scope.solar_system = {
+				painted_galaxy_spawn_connected_system = { INITIALIZER = neighbor_t1_first_colony }
+				last_created_system = {
+					random_system_planet = {
+						limit = { has_planet_flag = prescripted_ideal }
+						change_pc = event_target:painted_galaxy_current_country
+						reroll_planet = yes
+					}
+				}
+				if = {
+					limit = { num_guaranteed_colonies >= 2 }
+					random_neighbor_system = {
+						limit = { NOT = { is_same_value = last_created_system } }
+						painted_galaxy_spawn_connected_system = { INITIALIZER = neighbor_t2_second_colony }
+						last_created_system = {
+							random_system_planet = {
+								limit = { has_planet_flag = prescripted_ideal }
+								change_pc = event_target:painted_galaxy_current_country
+								reroll_planet = yes
+							}
+						}
+					}
+				}
+				# currently no support for modded 3+ guaranteed colonies
+			}
+		}
+		set_spawn_system_batch = end
+	}
+}
