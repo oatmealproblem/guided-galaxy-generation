@@ -153,7 +153,7 @@ export function generateStellarisGalaxy(
 					? `modifier = { add = 10 ruler = { check_variable_arithmetic = { which = trigger:leader_age modulo = 10 value = ${i % 10} } } }`
 					: '';
 			if (potentialHomeStars.includes(star.toString())) {
-				initializer = `random_empire_init_0${(i % 6) + 1}`;
+				initializer = `initializer = random_empire_init_0${(i % 6) + 1}`;
 				spawnWeight = `spawn_weight = { base = 10 ${preferredModifier} ${randomModifier} }`;
 			} else if (systems1JumpFromSpawn.has(star.toString())) {
 				// all systems with 1 of a spawn point get a random basic initializer
